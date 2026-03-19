@@ -4,14 +4,16 @@ import Footer from "./components/Footer";
 import Landing from "./components/Landing";
 import Navbar from "./components/Navbar";
 import ScrollFadeIn from "./components/ScrollFadeIn";
-import "./App.css";
 import ServicePage from "./servicePage/ServicePage";
-
+// Make sure this path matches wherever you saved the new file!
+import AppointmentPage from "./appointmentPage/AppointmentPage";
+import ProfilePage from "./profile_user/ProfilePage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* HOME ROUTE */}
         <Route
           path="/"
           element={
@@ -26,12 +28,36 @@ function App() {
             </>
           }
         />
+
+        {/* SERVICES MARKETPLACE ROUTE */}
         <Route
           path="/services"
           element={
             <>
               <Navbar />
               <ServicePage />
+              <Footer />
+            </>
+          }
+        />
+
+        {/* --- NEW: PAST & ONGOING APPOINTMENTS ROUTE --- */}
+        <Route
+          path="/appointments"
+          element={
+            <>
+              <Navbar />
+              <AppointmentPage />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <>
+              <Navbar />
+              <ProfilePage />
               <Footer />
             </>
           }
