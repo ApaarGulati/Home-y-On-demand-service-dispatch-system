@@ -7,17 +7,18 @@ import Login from "./components/Login";
 
 
 function App() {
-  
+
 
   return (
     <>
-     <ScrollFadeIn> 
-     <Navbar/> 
-     </ScrollFadeIn> 
-     <ScrollFadeIn> 
-     <Landing/>
-     </ScrollFadeIn> 
-    <Footer /> 
+       <ScrollFadeIn>
+        <Navbar />
+      </ScrollFadeIn>
+      <ScrollFadeIn>
+        <Landing />
+      </ScrollFadeIn>
+      <Footer /> 
+      {/* <Login/> */}
     </>
   )
 }
