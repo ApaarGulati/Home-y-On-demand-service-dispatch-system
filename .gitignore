@@ -1,0 +1,33 @@
+# =========================
+# Secrets and Configuration
+# =========================
+.env
+instance/
+
+# =========================
+# Virtual Environments
+# =========================
+venv/
+env/
+
+# =========================
+# Python Cache/Compiled Files
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# =========================
+# Databases (Local testing)
+# =========================
+*.sqlite
+*.sqlite3
+*.db
+
+# =========================
+# IDE and OS Clutter
+# =========================
+.vscode/
+.idea/
+.DS_Store
