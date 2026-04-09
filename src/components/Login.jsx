@@ -1,32 +1,67 @@
 import React from 'react'
+import Navbar from './Navbar'
 
 const Login = () => {
   return (
-    <div className='w-full h-146  flex flex-col  gap-15 items-center py-10'>  
-      {/* login/sign up title */}
-      <div className='text-5xl font-extrabold dark:text-white text-center '>Login to your account</div>
-      {/* first info colun */}
-      <div className='inputcontainer flex flex-col items-start w-xl '>
-        <div className='ml-2 text-[12px] dark:text-white'>Enter your email</div>
-        <input type="text" placeholder='Enter Here' className='bg-white rounded-l-full rounded-r-full px-4 w-full mt-2 border border-2 border-cyan-500 focus:outline-offset-2 focus:outline-2 focus:outline-cyan-500 h-8' />
+    <>
+      <Navbar />
+      {/* Container: Changed h-146 to min-h-screen to ensure it covers the page */}
+      <div className='min-h-screen w-full flex flex-col items-center justify-center py-10 px-4 '>
+        
+        {/* Card Wrapper: This adds the "anchor" we discussed */}
+        <div className='w-full max-w-md bg-white dark:bg-transparent p-8 rounded-3xl shadow-2xl flex flex-col gap-8'>
+          
+          {/* Title: Adjusted text size for mobile */}
+          <h1 className='text-3xl md:text-4xl font-extrabold dark:text-white text-center text-gray-800'>
+            Login
+          </h1>
+
+          <form className='flex flex-col gap-6' onSubmit={(e) => e.preventDefault()}>
+            
+            {/* Email Input Group */}
+            <div className='flex flex-col items-start w-full'>
+              <label className='ml-4 mb-1 text-sm font-semibold dark:text-gray-300 text-gray-600'>
+                Email Address
+              </label>
+              <input 
+                type="email" 
+                placeholder='Enter your email here ' 
+                className='bg-white dark:bg-gray-800 dark:text-white rounded-full px-5 w-full border-2 border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-300 h-12 transition-all' 
+              />
+            </div>
+
+            {/* Password Input Group */}
+            <div className='flex flex-col items-start w-full'>
+              <label className='ml-4 mb-1 text-sm font-semibold dark:text-gray-300 text-gray-600'>
+                Password
+              </label>
+              <input 
+                type="password" 
+                placeholder='Enter your password here' 
+                className='bg-white dark:bg-gray-800 dark:text-white rounded-full px-5 w-full border-2 border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-300 h-12 transition-all' 
+              />
+              <button type="button" className='text-cyan-500 text-xs underline cursor-pointer ml-4 mt-2 hover:text-cyan-700'>
+                Forgot Password?
+              </button>
+            </div>
+
+            {/* Login Button */}
+            <button className="bg-cyan-500 w-full h-12 text-white rounded-full font-bold text-lg cursor-pointer hover:bg-cyan-600 hover:shadow-lg transform active:scale-95 transition-all mt-4">
+              Login
+            </button>
+          </form>
+
+          {/* Footer Link */}
+          <div className='text-center'>
+            <span className='text-gray-500 dark:text-gray-400 text-sm'>Don't have an account? </span>
+            <button className='text-cyan-500 font-bold underline cursor-pointer hover:text-cyan-700 text-sm'>
+              Create Account
+            </button>
+          </div>
+
+        </div>
       </div>
-
-      <div className='inputcontainer flex flex-col items-start w-xl '>
-        <div className='ml-2 text-[12px] dark:text-white'>Enter your Password</div>
-        <input type="text" placeholder='Enter Here' className='bg-white rounded-l-full rounded-r-full px-4 w-full mt-2 border border-2 border-cyan-500 focus:outline-offset-2 focus:outline-2 focus:outline-cyan-500 h-8' />
-      </div>
-
-      <div className='flex flex-col gap-5'>
-        <div className='text-cyan-500 underline cursor-pointer'>Forgot Password ?</div>
-        <div className='text-cyan-500 underline cursor-pointer text-center'>Create Account</div>
-      </div>
-      
-
-      <button className="bg-cyan-500 w-35 h-10 text-center text-white   flex flex-row items-center justify-center rounded-l-full rounded-r-full font-bold text-[16px] cursor-pointer hover:bg-cyan-700">Login</button>
-      
-      
-
-    </div>
+    </>
   )
 }
 

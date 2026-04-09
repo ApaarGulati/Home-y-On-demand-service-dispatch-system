@@ -1,46 +1,5 @@
 import mysql.connector as sq
 
-# globalvar="127.0.0.1"
-# dbname="homey"
-
-
-
-# def last_30_days_transcation():
-#         q1="SELECT transaction_id, booking_id, base_amount, tip_amount, escrow_status, transaction_date FROM payment_transaction WHERE transaction_date >= CURRENT_DATE - INTERVAL 30 DAY;"
-#         try:
-#             conn=sq.connect(host=globalvar,user="root",password="1234",database=dbname)
-#             cur=conn.cursor()
-#             cur.execute(q1)
-#             l1=cur.fetchall()
-#             for row in l1:
-#                 print(row)
-
-#         except sq.Error as err:
-#             print(f"error : {err}")
-        
-
-
-
-# def payment_trnscn(booking_id="BKG-002"):
-     
-     
-#      q1="""SELECT * FROM payment_transactionWHERE booking_id='BKG-002';"""
-#      try:
-
-#         conn=sq.connect(host=globalvar,user="root",password="1234",database=dbname)
-#         cur=conn.cursor()
-#         cur.execute(q1)
-#         l1=cur.fetchall()
-#         for row in l1:
-#             print(row)
-
-#     except sq.Error as err:
-#         print(f"error : {err}")
-
-
-
-
-# last_30_days_transcation()
 
 
 import mysql.connector as sq
@@ -497,16 +456,16 @@ def get_user_transaction_history(user_id):
 
 
 
-#last_30_days_transaction()
-#bkg_trnscn()
-#wrk_trnscn()
+# last_30_days_transaction()
+# bkg_trnscn()
+# wrk_trnscn()
 #usr_trnscn()
 #sum_money()
 #dist_services()
-#cumulative_trnscn()
-#get_user_transaction_history("USR-01")
+# cumulative_trnscn()
+# get_user_transaction_history("USR-01")
 #get_worker_transaction_history("WRK-01")
-#get_average_review("WRK-01")
+get_average_review("WRK-01")
 #count_accounts_per_role()
 #get_account_balances()
 #get_users_with_multiple_workers()
