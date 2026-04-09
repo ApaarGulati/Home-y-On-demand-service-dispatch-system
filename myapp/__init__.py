@@ -29,12 +29,18 @@ def create_app():
 
 
     # ==========================================
-    # REGISTER BLUEPRINTS HERE
+    # BLUEPRINTS HERE
     # ==========================================
     from .routes.auth import auth_bp
+    from myapp.routes.services import services_bp
+    from myapp.routes.booking import bookings_bp
     
+
     # url_prefix means every route in auth_bp will automatically start with /api/auth
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(services_bp, url_prefix='/api/services')
+    app.register_blueprint(bookings_bp, url_prefix='/api/bookings')
+
 
     # A simple health-check route so you know the server is up
     @app.route('/')
@@ -42,10 +48,3 @@ def create_app():
         return jsonify({"message": "Homey API is running!"})
 
     return app
-
-
-
-    # simple route for checking
-    @app.route('/')
-    def hello():
-        return "Backend is running and ready to talk to the database!"

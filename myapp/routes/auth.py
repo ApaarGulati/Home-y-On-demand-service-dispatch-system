@@ -1,12 +1,15 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, make_response
+from functools import wraps
 import uuid
+import jwt
+import datetime
 from myapp.extensions import db
 # 1. Import AppUser and Worker
 from myapp.models.account import Account
 from myapp.models.app_user import AppUser
 from myapp.models.worker import Worker
 from sqlalchemy.exc import IntegrityError
-
+from myapp.middleware.auth_middleware import token_required
 from werkzeug.security import generate_password_hash, check_password_hash
 
 auth_bp = Blueprint('auth', __name__)
@@ -97,30 +100,82 @@ def login_account():
         # 3. Check if account exists AND if the password matches the hash
         if account and check_password_hash(account.password_hash, password):
             
-            # # Fetch the specific role ID to send to the frontend
-            # role_id = None
-            # if account.role_type == 'app_user':
-            #     user = AppUser.query.filter_by(account_id=account.account_id).first()
-            #     role_id = user.user_id if user else None
-            # elif account.role_type == 'worker':
-            #     worker = Worker.query.filter_by(account_id=account.account_id).first()
-            #     role_id = worker.worker_id if worker else None
+            # Fetch the specific role ID to send to the frontend
+            role_id = None
+            if account.role_type == 'app_user':
+                user = AppUser.query.filter_by(account_id=account.account_id).first()
+                role_id = user.user_id if user else None
+            elif account.role_type == 'worker':
+                worker = Worker.query.filter_by(account_id=account.account_id).first()
+                role_id = worker.worker_id if worker else None
 
-            # 4. Return success and the user's data (excluding the password!)
-            return jsonify({
+            # 1. Generate the token just like before
+            token = jwt.encode({
+                'user_id': role_id,
+                'role': account.role_type,
+                'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
+            }, current_app.config['SECRET_KEY'], algorithm='HS256')
+
+            # 2. Build the JSON response (Notice we do NOT put the token in here anymore!)
+            response = make_response(jsonify({
                 "status": "success",
-                "message": "Login successful.",
-                "data": {
-                    "account_id": account.account_id,
-                    # "role_id": role_id,
-                    "role_type": account.role_type,
-                    "first_name": account.first_name,
-                    "last_name": account.last_name
-                }
-            }), 200
+                "message": "Login successful."
+            }))
 
-        # 4. If email doesn't exist OR password doesn't match
+            # 3. Attach the token as an HttpOnly Cookie
+            response.set_cookie(
+                'access_token',            # The name of the cookie
+                token,                     # The actual JWT string
+                httponly=True,             # JavaScript CANNOT read this (super secure)
+                secure=False,              # Set to True later when you have HTTPS
+                samesite='Lax',            # Helps prevent CSRF attacks
+                max_age=3600               # Cookie expires in 1 hour (3600 seconds)
+            )
+
+            return response, 200
+
         return jsonify({"status": "error", "message": "Invalid email or password."}), 401
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+
+@auth_bp.route('/logout', methods=['POST'])
+@token_required
+def logout_account(current_user):
+    # 1. Create a successful JSON response
+    response = make_response(jsonify({
+        "status": "success",
+        "message": "Successfully logged out."
+    }))
+    
+    # 2. Destroy the cookie by overwriting it with a blank value and 0 lifespan
+    response.set_cookie(
+        'access_token', 
+        '', 
+        expires=0, 
+        httponly=True,
+        samesite='Lax'
+    )
+    
+    return response, 200
+
+@auth_bp.route('/profile', methods=['GET'])
+@token_required # wrapper we made
+def get_profile(current_user):
+    
+    # Notice how we accept 'current_user' as an argument? 
+    user_role = current_user['role']
+    specific_id = current_user['user_id']
+    
+    return jsonify({
+        "status": "success",
+        "message": f"Welcome to the vault! You are a {user_role}.",
+        "your_id": specific_id
+    }), 200
+
+
+
+
+# register, Booking,  cancelling,  payment,   encash
