@@ -10,6 +10,8 @@ import AppointmentPage from "./appointmentPage/AppointmentPage";
 import ProfilePage from "./profile_user/ProfilePage";
 import Login from "./components/Login";
 import CreateAccount from "./components/CreateAccount";
+import Checkout from "./components/Checkout";
+import OrderConfirmed from "./components/OrderConfirmed";
 
 function App() {
   return (
@@ -36,7 +38,6 @@ function App() {
           path="/services"
           element={
             <>
-              <Navbar />
               <ServicePage />
               <Footer />
             </>
@@ -78,6 +79,18 @@ function App() {
         <>
           <CreateAccount/>
         </>
+        }/>
+
+        <Route path="/checkout" element={
+          <>
+            <Checkout/>
+          </>
+        }/>
+
+        <Route path="/orderconfirmed" element={
+          <>
+            <OrderConfirmed/>
+          </>
         }/>
 
       </Routes>

@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import Navbar from './Navbar'
+import { useNavigate } from 'react-router-dom';
 
 const CreateAccount = () => {
+  const navigate=useNavigate();
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
   // State to track if they are a 'worker' or 'consumer'
@@ -129,7 +131,7 @@ const CreateAccount = () => {
 
           <div className='text-center'>
             <span className='text-gray-500 dark:text-gray-400 text-sm'>Already have an account? </span>
-            <button className='text-cyan-500 font-bold underline cursor-pointer hover:text-cyan-700 text-sm'>
+            <button className='text-cyan-500 font-bold underline cursor-pointer hover:text-cyan-700 text-sm' onClick={()=>navigate("/login")}>
               Login
             </button>
           </div>

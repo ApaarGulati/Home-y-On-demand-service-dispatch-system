@@ -1,7 +1,8 @@
 import React from 'react'
 import Navbar from './Navbar'
-
+import { useNavigate } from 'react-router-dom'
 const Login = () => {
+  const navigate=useNavigate()
   return (
     <>
       <Navbar />
@@ -54,7 +55,7 @@ const Login = () => {
           {/* Footer Link */}
           <div className='text-center'>
             <span className='text-gray-500 dark:text-gray-400 text-sm'>Don't have an account? </span>
-            <button className='text-cyan-500 font-bold underline cursor-pointer hover:text-cyan-700 text-sm'>
+            <button className='text-cyan-500 font-bold underline cursor-pointer hover:text-cyan-700 text-sm' onClick={()=>navigate("/createaccount")} >
               Create Account
             </button>
           </div>
