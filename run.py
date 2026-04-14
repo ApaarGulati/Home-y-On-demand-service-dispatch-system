@@ -1,3 +1,5 @@
+##this is the main file where the app is created and is run 
+
 from myapp import create_app
 from dotenv import load_dotenv  # <-- 1. Add this import
 
@@ -9,3 +11,5 @@ app = create_app()
 if __name__ == '__main__':
     # Start the server
     app.run(debug=True)
+
+

@@ -1,4 +1,5 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 import os
 from sqlalchemy import text
 from .extensions import db
@@ -18,6 +19,7 @@ from .models.review import Review
 def create_app():
     # 1. Initialize the app
     app = Flask(__name__)
+    CORS(app)
     
     # 2. Configure the database.   make sure to have DATABASE_URL and SECRET_KEY in .env
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
@@ -48,3 +50,5 @@ def create_app():
         return jsonify({"message": "Homey API is running!"})
 
     return app
+
+

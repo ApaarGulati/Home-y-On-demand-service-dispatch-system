@@ -3,6 +3,7 @@ from functools import wraps
 import uuid
 import jwt
 import datetime
+from flask_cors import CORS
 from myapp.extensions import db
 # 1. Import AppUser and Worker
 from myapp.models.account import Account
@@ -13,7 +14,9 @@ from myapp.middleware.auth_middleware import token_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from myapp.untils.generate_string import generate_id
 
+
 auth_bp = Blueprint('auth', __name__)
+CORS(auth_bp)
 
 
 @auth_bp.route('/register', methods=['POST'])
