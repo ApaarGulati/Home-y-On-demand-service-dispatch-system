@@ -3,6 +3,7 @@ from myapp.extensions import db
 import uuid
 import datetime # Make sure this is imported!
 import time
+from datetime import datetime, timezone
 from sqlalchemy.exc import OperationalError
 
 from myapp.models.booking import Booking
@@ -11,6 +12,10 @@ from myapp.models.address import Address
 from myapp.models.payment_transaction import PaymentTransaction
 from myapp.models.worker_services import WorkerService
 from myapp.middleware.auth_middleware import token_required, role_required
+from myapp.untils.generate_string import generate_id
+from sqlalchemy.exc import IntegrityError
+
+
 
 bookings_bp = Blueprint('bookings', __name__)
 
@@ -18,89 +23,103 @@ bookings_bp = Blueprint('bookings', __name__)
 @token_required
 @role_required(['app_user'])
 def create_booking(current_user):
-    data = request.get_json()
-    worker_id = data.get('worker_id')
-    service_id = data.get('service_id')
-    
 
-    # Only validate the absolutely required fields
-    if not worker_id or not service_id:
-        return jsonify({"status": "error", "message": "worker_id and service_id are required"}), 400
+    data = request.get_json(silent=True) or {}
+    
+    # 1. Defensive Validation Loop
+    required = ["worker_id", "service_id", "sched_start", "sched_end"]
+    for field in required:
+        if not data.get(field):
+            return jsonify({"status": "error", "message": f"'{field}' is required"}), 400
+        
 
     try:
-        # 1. Look up the specific worker's price
-        worker_service = WorkerService.query.filter_by(worker_id=worker_id, service_id=service_id).first()
+        # 2. Parse and Validate Times
+        # Expecting ISO format: "2026-04-15T10:00:00"
+        s_start = datetime.fromisoformat(data['sched_start'])
+        s_end = datetime.fromisoformat(data['sched_end'])
+        now = datetime.now(timezone.utc)
+
+        if s_start.tzinfo is None: # Ensure we handle timezone-naive strings safely
+            s_start = s_start.replace(tzinfo=timezone.utc)
+        if s_end.tzinfo is None:
+            s_end = s_end.replace(tzinfo=timezone.utc)
+
+        if s_start < now:
+            return jsonify({"status": "error", "message": "Cannot book in the past"}), 400
+        if s_end <= s_start:
+            return jsonify({"status": "error", "message": "End time must be after start time"}), 400
+
+
+        # 3. Prerequisites Check
+        worker_service = WorkerService.query.filter_by(
+            worker_id=data['worker_id'], 
+            service_id=data['service_id']
+        ).first()
+
         if not worker_service:
-            return jsonify({"status": "error", "message": "Worker does not offer this service"}), 404
+            return jsonify({"status": "error", "message": "Service not available for this worker"}), 404
 
-        # 2. Get the AppUser to find their Account ID
-        customer = AppUser.query.filter_by(user_id=current_user['user_id']).first()
-        
-        # 3. Check if they have ANY address linked to their account
-        user_address = Address.query.filter_by(account_id=customer.account_id).first()
+        customer = AppUser.query.get(current_user['user_id'])
+        if not Address.query.filter_by(account_id=customer.account_id).first():
+            return jsonify({"status": "error", "message": "Address required to book"}), 403
 
-        # === START TRANSACTION ===
 
-        # If no address was found in the database, trigger the rollback!
-        if not user_address:
-            raise ValueError("ADDRESS_MISSING") 
-        
+        # 4. Transactional Insertion
         attempts = 0
-        maxAttempt = 5
-        while attempts < maxAttempt:
-            attempts +=1
+        maxAttempts = 5
+        while attempts < maxAttempts:
+            attempts += 1
+            b_id = generate_id("BK", 20)
+            t_id = generate_id("TXN", 20)
+
+            try:
+                new_booking = Booking(
+                    booking_id=b_id,
+                    user_id=current_user['user_id'],
+                    worker_id=data['worker_id'],
+                    service_id=data['service_id'],
+                    sched_start=s_start,
+                    sched_end=s_end,
+                    stat='pending' # Explicitly set even if it's the DB default
+                )
+                
+                base_price = worker_service.base_price
+                # Assuming no tip at booking time
+                total_price = base_price
+                
+                new_payment = PaymentTransaction(
+                    transaction_id=t_id,
+                    booking_id=b_id,
+                    base_amount=base_price,
+                    tip_amount=0.00,
+                    total_amount=total_price, # MUST INCLUDE THIS
+                    escrow_status='HELD'
+                )
+
+                db.session.add(new_booking)
+                db.session.add(new_payment)
+                db.session.commit()
+
+                return jsonify({
+                    "status": "success", 
+                    "booking_id": b_id,
+                    "scheduled": f"{s_start.isoformat()} to {s_end.isoformat()}"
+                }), 201
+
+            except IntegrityError:
+                db.session.rollback()
+                continue
         
-            new_booking_id = f"{str(uuid.uuid4().hex[:6]).upper()}"
-            new_booking = Booking(
-                booking_id=new_booking_id,
-                user_id=current_user['user_id'],
-                worker_id=worker_id,
-                service_id=service_id,
-                stat='pending' 
-            )
-            db.session.add(new_booking) 
+        return jsonify({"status": "error", "message": "ID collision exhausted"}), 500
 
-            new_txn_id = f"{str(uuid.uuid4().hex[:6]).upper()}"
-            new_payment = PaymentTransaction(
-                transaction_id=new_txn_id,
-                booking_id=new_booking_id,
-                base_amount=worker_service.base_price,
-                tip_amount=0.00,
-                escrow_status='HELD'
-            )
-            db.session.add(new_payment)
-
-
-            # 5. Commit only if everything is perfect
-            db.session.commit()
-            # === END TRANSACTION ===
-
-            return jsonify({
-                "status": "success",
-                "message": "Booking created successfully.",
-                "booking": new_booking.to_dict()
-            }), 201
-
-    except IntegrityError as e:
-            # Something collided. Wipe the staging area.
-            db.session.rollback()
-            error_msg = str(e.orig).lower()
-
-    except ValueError as ve:
-        db.session.rollback()
-        
-        if str(ve) == "ADDRESS_MISSING":
-            return jsonify({
-                "status": "error", 
-                "message": "Transaction aborted: You must add an address to your profile before booking a service."
-            }), 403
-            
-        return jsonify({"status": "error", "message": "Invalid data format."}), 400
-
+    except ValueError:
+        return jsonify({"status": "error", "message": "Invalid date format. Use ISO 8601."}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "Transaction failed.", "details": str(e)}), 500
-    
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+        
 
 
 @bookings_bp.route('/decline-booking', methods=['POST'])
