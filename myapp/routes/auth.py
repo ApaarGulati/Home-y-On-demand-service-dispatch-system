@@ -11,6 +11,7 @@ from myapp.models.worker import Worker
 from sqlalchemy.exc import IntegrityError
 from myapp.middleware.auth_middleware import token_required
 from werkzeug.security import generate_password_hash, check_password_hash
+from myapp.untils.generate_string import generate_id
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -18,17 +19,35 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def register_account():
     data = request.get_json()
-    
+    attempts = 0
+    maxAttempts = 5
+
+    for field in ["first_name", "email", "role_type", "phone", "password", "longitude", "latitude"]:
+        value = data.get(field)
+        if not value or (isinstance(value, str) and not value.strip()):
+            return jsonify({
+                "status": "error", 
+                "message": f"Field '{field}' is required and cannot be empty."
+            }), 400
+        
+    allowed_roles = ['app_user', 'worker']
+    if data.get('role_type') not in allowed_roles:
+        return jsonify({"status": "error", "message": "Invalid role"}), 400
+
+    hashed_pass = generate_password_hash(data['password'])
+
     # 1. Generate the initial ID (The "Optimistic" First Try)
     
-    while True:
-        account_id = str(uuid.uuid4().hex[:10]).upper()
+    while attempts < maxAttempts:
+        account_id = generate_id("ACC",20)
+        attempts += 1
+
         try:
             # 2. Try to directly add the account
             new_account = Account(
                 account_id=account_id,
                 email=data['email'],
-                password_hash=generate_password_hash(data['password']),
+                password_hash=hashed_pass,
                 role_type=data['role_type'],
                 phone=data['phone'],
                 first_name=data['first_name'],
@@ -38,12 +57,12 @@ def register_account():
             db.session.add(new_account)
 
             if data['role_type'] == 'app_user':
-                user_id = str(uuid.uuid4().hex[:10]).upper()
+                user_id = generate_id("USR",20)
                 new_user = AppUser(user_id=user_id, account_id=account_id, longitude=data['longitude'], latitude=data['latitude'])
                 db.session.add(new_user)
 
             elif data['role_type'] == 'worker':
-                worker_id = str(uuid.uuid4().hex[:10]).upper()
+                worker_id = generate_id("WRK",20)
                 new_worker = Worker(worker_id=worker_id, account_id=account_id, longitude=data['longitude'], latitude=data['latitude'], stat='Available')
                 db.session.add(new_worker)
 
@@ -81,6 +100,8 @@ def register_account():
             db.session.rollback()
             return jsonify({"status": "error", "message": str(e)}), 400
         
+    return jsonify({"status": "error", "message": "ID generation exhausted"}), 500
+        
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -108,6 +129,14 @@ def login_account():
             elif account.role_type == 'worker':
                 worker = Worker.query.filter_by(account_id=account.account_id).first()
                 role_id = worker.worker_id if worker else None
+            
+            if not role_id: 
+                
+                return jsonify({
+                    "status": "error", 
+                    "message": "Profile configuration incomplete. Please log in again or contact support."
+                }), 404
+
 
             # 1. Generate the token just like before
             token = jwt.encode({
