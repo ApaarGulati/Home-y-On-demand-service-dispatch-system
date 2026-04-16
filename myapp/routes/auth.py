@@ -104,10 +104,6 @@ def register_account():
             return jsonify({"status": "error", "message": str(e)}), 400
         
     return jsonify({"status": "error", "message": "ID generation exhausted"}), 500
-        
-
-
-
 
 @auth_bp.route('/login', methods=['POST'])
 def login_account():
