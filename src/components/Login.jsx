@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 
 const handlesubmit=async (email,password) => {
   //error checks
-  const navigate=useNavigate();
+  // const navigate=useNavigate();
 
   if(email.length==0||password.length==0){
     alert("None of the fields should be empty");
@@ -36,7 +36,9 @@ const handlesubmit=async (email,password) => {
 
 
   if(translation.status==="success"){
-    navigate("/services")
+    alert(translation.message);
+
+    // alert("/services")
   }
   
 
