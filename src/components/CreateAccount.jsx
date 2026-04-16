@@ -1,15 +1,13 @@
 import React, { useState } from 'react'
 import Navbar from './Navbar'
 import { useNavigate } from 'react-router-dom';
-
-
+import { redirect } from 'react-router-dom';
 
 const isNumeric = (val) => !isNaN(val) && Number.isFinite(+val);
 const isAlpha = (str) => !(/^[A-Za-z]+$/.test(str));
 
 
 const handlesubmit = async (role, location, fname, mname, lname, phnum, email, passwd) => {
-  // const navigate=useNavigate()
   if (location.length == 0 || fname.length == 0 || mname.length == 0 || lname.length == 0 || phnum.length == 0 || email.length == 0 || passwd.length == 0) {
     alert("No fields should be left empty. Please ensure.")
     return;
@@ -63,6 +61,7 @@ const handlesubmit = async (role, location, fname, mname, lname, phnum, email, p
 
   if(jresponse.status==="success"){
     alert(jresponse.message);
+    redirect("/login")
     // navigate("/login")
     return ;
   }

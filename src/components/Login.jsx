@@ -2,10 +2,10 @@ import React from 'react'
 import Navbar from './Navbar'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { redirect } from 'react-router-dom'
 
 const handlesubmit=async (email,password) => {
-  //error checks
-  // const navigate=useNavigate();
+  
 
   if(email.length==0||password.length==0){
     alert("None of the fields should be empty");
@@ -37,8 +37,7 @@ const handlesubmit=async (email,password) => {
 
   if(translation.status==="success"){
     alert(translation.message);
-
-    // alert("/services")
+    redirect("/services")
   }
   
 
