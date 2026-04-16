@@ -76,7 +76,7 @@ const CreateAccount = () => {
     console.log(payload);
     console.log("connecting to the server and fetching response");
     var response = await fetch("http://127.0.0.1:5000/api/auth/register", { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-
+    
     if (jresponse.status === "error") {
       alert(jresponse.message);
       return;
