@@ -7,68 +7,7 @@ const isNumeric = (val) => !isNaN(val) && Number.isFinite(+val);
 const isAlpha = (str) => !(/^[A-Za-z]+$/.test(str));
 
 
-const handlesubmit = async (role, location, fname, mname, lname, phnum, email, passwd) => {
-  if (location.length == 0 || fname.length == 0 || mname.length == 0 || lname.length == 0 || phnum.length == 0 || email.length == 0 || passwd.length == 0) {
-    alert("No fields should be left empty. Please ensure.")
-    return;
-  }
 
-  //error checks 
-  var arr = location.split(",")
-  if ((!(isNumeric(arr[0]) && isNumeric(arr[1]))) || arr.length != 2) {
-    alert("Kindly enter valid location")
-    return;
-  }
-
-  if (isNumeric(fname) || isNumeric(mname) || isNumeric(lname) || isAlpha(fname) || isAlpha(mname) || isAlpha(lname)) {
-    alert("please enter a valid name")
-    return;
-  }
-
-
-  if (phnum.length != 10 || !(isNumeric(phnum))) {
-    alert("Please enter a valid phone number")
-    return;
-  }
-
-  if (!(email.endsWith(".com") && email.includes("@"))) {
-    alert("please enter a valid email id")
-    return;
-  }
-
-  var payload = {
-    "email": email,
-    "password": passwd,
-    "role_type": (role == "consumer" ? "app_user" : "worker"),
-    "phone": parseInt(phnum),
-    "first_name": fname,
-    "middle_name": mname,
-    "last_name": lname,
-    "longitude": parseFloat(arr[1].trim()),
-    "latitude": parseFloat(arr[0].trim())
-  }
-
-
-  console.log(payload);
-  console.log("connecting to the server and fetching response");
-  var response = await fetch("http://127.0.0.1:5000/api/auth/register", { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  var jresponse=await response.json();
-
-  if(jresponse.status==="error"){
-    alert(jresponse.message);
-    return;
-  }
-
-  if(jresponse.status==="success"){
-    alert(jresponse.message);
-    redirect("/login")
-    // navigate("/login")
-    return ;
-  }
-
-
-
-}
 
 
 
@@ -88,6 +27,71 @@ const CreateAccount = () => {
   const [phonenum, setphonenum] = useState("");
   const [email, setemail] = useState("");
   const [password, setpassword] = useState("");
+
+
+
+
+  const handlesubmit = async (role, location, fname, mname, lname, phnum, email, passwd) => {
+    if (location.length == 0 || fname.length == 0 || mname.length == 0 || lname.length == 0 || phnum.length == 0 || email.length == 0 || passwd.length == 0) {
+      alert("No fields should be left empty. Please ensure.")
+      return;
+    }
+
+    //error checks 
+    var arr = location.split(",")
+    if ((!(isNumeric(arr[0]) && isNumeric(arr[1]))) || arr.length != 2) {
+      alert("Kindly enter valid location")
+      return;
+    }
+
+    if (isNumeric(fname) || isNumeric(mname) || isNumeric(lname) || isAlpha(fname) || isAlpha(mname) || isAlpha(lname)) {
+      alert("please enter a valid name")
+      return;
+    }
+
+
+    if (phnum.length != 10 || !(isNumeric(phnum))) {
+      alert("Please enter a valid phone number")
+      return;
+    }
+
+    if (!(email.endsWith(".com") && email.includes("@"))) {
+      alert("please enter a valid email id")
+      return;
+    }
+
+    var payload = {
+      "email": email,
+      "password": passwd,
+      "role_type": (role == "consumer" ? "app_user" : "worker"),
+      "phone": parseInt(phnum),
+      "first_name": fname,
+      "middle_name": mname,
+      "last_name": lname,
+      "longitude": parseFloat(arr[1].trim()),
+      "latitude": parseFloat(arr[0].trim())
+    }
+
+
+    console.log(payload);
+    console.log("connecting to the server and fetching response");
+    var response = await fetch("http://127.0.0.1:5000/api/auth/register", { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+    if (jresponse.status === "error") {
+      alert(jresponse.message);
+      return;
+    }
+
+    if (jresponse.status === "success") {
+      alert(jresponse.message);
+      navigate("/login")
+      return;
+    }
+
+
+
+  }
+
 
 
   const handleGetLocation = () => {
