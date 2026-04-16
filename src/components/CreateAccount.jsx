@@ -32,7 +32,7 @@ const CreateAccount = () => {
 
 
   const handlesubmit = async (role, location, fname, mname, lname, phnum, email, passwd) => {
-    if (location.length == 0 || fname.length == 0 || mname.length == 0 || lname.length == 0 || phnum.length == 0 || email.length == 0 || passwd.length == 0) {
+    if (location.length == 0 || fname.length == 0 || lname.length == 0 || phnum.length == 0 || email.length == 0 || passwd.length == 0) {
       alert("No fields should be left empty. Please ensure.")
       return;
     }
@@ -44,7 +44,7 @@ const CreateAccount = () => {
       return;
     }
 
-    if (isNumeric(fname) || isNumeric(mname) || isNumeric(lname) || isAlpha(fname) || isAlpha(mname) || isAlpha(lname)) {
+    if (isNumeric(fname) || isNumeric(lname) || isAlpha(fname) || isAlpha(lname)) {
       alert("please enter a valid name")
       return;
     }
@@ -76,6 +76,9 @@ const CreateAccount = () => {
     console.log(payload);
     console.log("connecting to the server and fetching response");
     var response = await fetch("http://127.0.0.1:5000/api/auth/register", { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+    const jresponse= await response.json();
+
 
     if (jresponse.status === "error") {
       alert(jresponse.message);
