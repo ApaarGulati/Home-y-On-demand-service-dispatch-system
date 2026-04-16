@@ -14,6 +14,10 @@ from myapp.models.worker_services import WorkerService
 from myapp.middleware.auth_middleware import token_required, role_required
 from myapp.untils.generate_string import generate_id
 from sqlalchemy.exc import IntegrityError
+from myapp.models.account import Account
+from myapp.models.services import Service
+
+
 
 
 
@@ -63,6 +67,15 @@ def create_booking(current_user):
         customer = AppUser.query.get(current_user['user_id'])
         if not Address.query.filter_by(account_id=customer.account_id).first():
             return jsonify({"status": "error", "message": "Address required to book"}), 403
+
+        customer_wallet = Wallet.query.with_for_update().filter_by(account_id=customer.account_id).first()
+        base_price = float(worker_service.base_price)
+
+        if not customer_wallet or float(customer_wallet.balance) < base_price:
+            return jsonify({"status": "error", "message": "Insufficient wallet balance for deposit"}), 402
+
+        # Deduct the deposit upfront!
+        customer_wallet.balance = float(customer_wallet.balance) - base_price
 
 
         # 4. Transactional Insertion
@@ -120,34 +133,41 @@ def create_booking(current_user):
         return jsonify({"status": "error", "message": str(e)}), 500
 
         
-
-
 @bookings_bp.route('/decline-booking', methods=['POST'])
 @token_required
 @role_required(['worker'])
 def decline_booking(current_user):
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     booking_id = data.get('booking_id')
+    
+    if not booking_id:
+        return jsonify({"status": "error", "message": "booking_id is required"}), 400
+
     try:
-        booking =  Booking.query.with_for_update().filter_by(booking_id = booking_id).first()
+        # FIX 1: Ensure this worker owns this booking
+        booking = Booking.query.with_for_update().filter_by(
+            booking_id=booking_id,
+            worker_id=current_user['user_id'] 
+        ).first()
 
         if not booking:
-            return jsonify({"error": "Booking not found"}),404
+            return jsonify({"status": "error", "message": "Booking not found or unauthorized"}), 404
         
         if booking.stat != 'pending':
             db.session.rollback()
             return jsonify({
                 "status": "error", 
-                "message": "Conflict: This booking has already been processed"
+                "message": f"Conflict: Cannot decline a booking in '{booking.stat}' state"
             }), 409
         
         booking.stat = 'declined'
         db.session.commit()
         
-        return jsonify({"status": "success", "message": "Booking confirmed"}), 200
+        # FIX 3: Correct message
+        return jsonify({"status": "success", "message": "Booking declined"}), 200
+        
     except OperationalError as e:
         db.session.rollback()
-        # 1205 is the specific MySQL error code for "Lock wait timeout exceeded"
         if "1205" in str(e):
             return jsonify({
                 "status": "error", 
@@ -164,39 +184,37 @@ def decline_booking(current_user):
 @token_required
 @role_required(['worker'])
 def accept_booking(current_user):
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     booking_id = data.get('booking_id')
 
+    if not booking_id:
+        return jsonify({"status": "error", "message": "booking_id is required"}), 400
+
     try:
-        # 1. Start Transaction & Lock the Row
-        # with_for_update() prevents any other transaction from touching this row
-        booking = Booking.query.with_for_update().filter_by(booking_id=booking_id).first()
+        # FIX 1: Ensure this worker owns this booking
+        booking = Booking.query.with_for_update().filter_by(
+            booking_id=booking_id,
+            worker_id=current_user['user_id']
+        ).first()
 
         if not booking:
-            return jsonify({"error": "Booking not found"}), 404
+            return jsonify({"status": "error", "message": "Booking not found or unauthorized"}), 404
         
-
         if booking.stat != 'pending':
             db.session.rollback()
             return jsonify({
                 "status": "error", 
-                "message": "Conflict: This booking has already been processed"
+                "message": f"Conflict: Cannot accept a booking in '{booking.stat}' state"
             }), 409
 
-
-        # 2. Simulate a heavy proces
-        # This gives you time to trigger the conflict from another window
-        # print(f"Lock acquired on {booking_id}. Sleeping for 10 seconds...")
-        # time.sleep(5) 
-
-        # 3. Update status and commit
-        booking.stat = 'ongoing'
+        # FIX 2: Correct state transition
+        booking.stat = 'accepted'
         db.session.commit()
         
-        return jsonify({"status": "success", "message": "Booking confirmed"}), 200
+        return jsonify({"status": "success", "message": "Booking accepted successfully"}), 200
+        
     except OperationalError as e:
         db.session.rollback()
-        # 1205 is the specific MySQL error code for "Lock wait timeout exceeded"
         if "1205" in str(e):
             return jsonify({
                 "status": "error", 
@@ -204,6 +222,395 @@ def accept_booking(current_user):
             }), 409
         return jsonify({"status": "error", "message": "Database busy", "details": str(e)}), 500
    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+@bookings_bp.route('/worker-bookings', methods=['GET'])
+@token_required
+@role_required(['worker'])
+def get_worker_bookings(current_user):
+    try:
+        # 1. Check what tab the worker is viewing (default to 'pending')
+        status_filter = request.args.get('status', 'pending', type=str)
+        
+        # 2. Query
+        # We need the booking info, the customer's name/phone, their address, and the pay!
+        query = db.session.query(
+            Booking.booking_id,
+            Booking.sched_start,
+            Booking.sched_end,
+            Booking.actual_start,
+            Booking.stat,
+            Service.service_name,
+            Account.first_name,
+            Account.last_name,
+            Account.phone_number, # Worker needs to call them!
+            Address.street_address,
+            Address.city,
+            Address.latitude,
+            Address.longitude,
+            PaymentTransaction.total_amount
+        ).join(Service, Booking.service_id == Service.service_id) \
+         .join(AppUser, Booking.user_id == AppUser.user_id) \
+         .join(Account, AppUser.account_id == Account.account_id) \
+         .join(Address, Account.account_id == Address.account_id) \
+         .join(PaymentTransaction, Booking.booking_id == PaymentTransaction.booking_id) \
+         .filter(Booking.worker_id == current_user['user_id']) # SECURE: Only this worker's jobs
+
+        # 3. Apply the Status Filter
+        if status_filter == 'history':
+            # Group completed and declined together for the history tab
+            query = query.filter(Booking.stat.in_(['completed', 'declined']))
+            query = query.order_by(Booking.sched_start.desc()) # Newest history first
+        else:
+            query = query.filter(Booking.stat == status_filter)
+            query = query.order_by(Booking.sched_start.asc())  # Closest upcoming first
+
+        results = query.all()
+
+        # 4. Format the output
+        bookings_list = []
+        for row in results:
+            bookings_list.append({
+                "booking_id": row.booking_id,
+                "service": row.service_name,
+                "status": row.stat,
+                "scheduled_time": f"{row.sched_start.isoformat()} to {row.sched_end.isoformat()}",
+                "actual_start": row.actual_start.isoformat() if row.actual_start else None,
+                "customer": {
+                    "name": f"{row.first_name} {row.last_name}",
+                    "phone": row.phone_number,
+                    "address": f"{row.street_address}, {row.city}",
+                    "lat": float(row.latitude) if row.latitude else None,
+                    "lng": float(row.longitude) if row.longitude else None
+                },
+                "payout": float(row.total_amount)
+            })
+
+        return jsonify({"status": "success", "data": bookings_list}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+@bookings_bp.route('/start-work', methods=['POST'])
+@token_required
+@role_required(['worker'])
+def start_work(current_user):
+    data = request.get_json(silent=True) or {}
+    booking_id = data.get('booking_id')
+
+    if not booking_id:
+        return jsonify({"status": "error", "message": "booking_id is required"}), 400
+
+    try:
+        # 1. Lock the row and verify ownership
+        booking = Booking.query.with_for_update().filter_by(
+            booking_id=booking_id,
+            worker_id=current_user['user_id']
+        ).first()
+
+        if not booking:
+            return jsonify({"status": "error", "message": "Booking not found or unauthorized"}), 404
+        
+        # 2. State Machine Logic: Must be 'accepted' to start
+        if booking.stat != 'accepted':
+            db.session.rollback()
+            return jsonify({
+                "status": "error", 
+                "message": f"Cannot start work. Booking is currently '{booking.stat}'"
+            }), 409
+
+        # 3. The "Punch In"
+        # We record the exact moment they started working
+        booking.actual_start = datetime.now(timezone.utc)
+        booking.stat = 'ongoing'
+        
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Work started successfully",
+            "start_time": booking.actual_start.isoformat()
+        }), 200
+        
+    except OperationalError as e:
+        db.session.rollback()
+        if "1205" in str(e):
+            return jsonify({"status": "error", "message": "Row locked. Try again."}), 409
+        return jsonify({"status": "error", "message": "Database busy"}), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+
+@bookings_bp.route('/request-completion', methods=['POST'])
+@token_required
+@role_required(['worker'])
+def request_completion(current_user):
+    data = request.get_json(silent=True) or {}
+    booking_id = data.get('booking_id')
+    
+    # extra_charges could be 0 if it was a simple, flat-rate job
+    extra_charges = data.get('extra_charges', 0.00) 
+
+    if not booking_id:
+        return jsonify({"status": "error", "message": "booking_id is required"}), 400
+
+    try:
+        # Validate extra_charges is a positive number
+        extra_charges = float(extra_charges)
+        if extra_charges < 0:
+            return jsonify({"status": "error", "message": "Extra charges cannot be negative"}), 400
+
+        # 1. Lock the booking row and verify the WORKER owns it
+        booking = Booking.query.with_for_update().filter_by(
+            booking_id=booking_id,
+            worker_id=current_user['user_id']
+        ).first()
+
+        if not booking:
+            return jsonify({"status": "error", "message": "Booking not found or unauthorized"}), 404
+        
+        # 2. State Machine Logic: Must be 'ongoing' to request completion
+        if booking.stat != 'ongoing':
+            db.session.rollback()
+            return jsonify({
+                "status": "error", 
+                "message": f"Cannot submit bill. Booking is currently '{booking.stat}'"
+            }), 409
+
+
+        # if services price is fixed then cannot charge extra (fraud prevention)
+        worker_service = WorkerService.query.filter_by(
+            worker_id=booking.worker_id, 
+            service_id=booking.service_id
+        ).first()
+
+        if not worker_service:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": "Service definition missing"}), 500
+
+        # If it's a fixed price, but they tried to add extra money -> REJECT
+        if worker_service.price_type == 'fixed' and extra_charges > 0:
+            db.session.rollback()
+            return jsonify({
+                "status": "error", 
+                "message": "Fraud Prevention: This is a fixed-price service. You cannot add extra charges."
+            }), 403
+
+        # 3. Fetch the Payment Transaction to update the total
+        payment = PaymentTransaction.query.filter_by(booking_id=booking_id).first()
+        if not payment:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": "Financial record missing for this booking"}), 500
+
+        # 4. Stop the clock & Update Financials
+        booking.actual_end = datetime.now(timezone.utc)
+        
+        # Calculate the new total (Base Deposit + Extra Charges)
+        new_total = float(payment.base_amount) + extra_charges
+        payment.total_amount = new_total
+        
+        # 5. Hand the baton to the Customer
+        booking.stat = 'payment_pending'
+        
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Final bill sent to customer for approval.",
+            "data": {
+                "base_amount": float(payment.base_amount),
+                "extra_charges": extra_charges,
+                "total_amount": new_total,
+                "end_time": booking.actual_end.isoformat()
+            }
+        }), 200
+        
+    except ValueError:
+        return jsonify({"status": "error", "message": "Invalid number format for extra_charges"}), 400
+    except OperationalError as e:
+        db.session.rollback()
+        if "1205" in str(e):
+            return jsonify({"status": "error", "message": "Row locked. Try again."}), 409
+        return jsonify({"status": "error", "message": "Database busy"}), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+
+from myapp.models.wallet import Wallet # Make sure you have this model created!
+
+@bookings_bp.route('/approve-completion', methods=['POST'])
+@token_required
+@role_required(['app_user']) # ONLY the customer can do this!
+def approve_completion(current_user):
+    data = request.get_json(silent=True) or {}
+    booking_id = data.get('booking_id')
+
+    if not booking_id:
+        return jsonify({"status": "error", "message": "booking_id is required"}), 400
+
+    try:
+        # 1. Lock the booking and verify the CUSTOMER owns it
+        booking = Booking.query.with_for_update().filter_by(
+            booking_id=booking_id,
+            user_id=current_user['user_id']
+        ).first()
+
+        if not booking:
+            return jsonify({"status": "error", "message": "Booking not found or unauthorized"}), 404
+        
+        # 2. State Machine Logic: Must be waiting for payment approval
+        if booking.stat != 'payment_pending':
+            db.session.rollback()
+            return jsonify({
+                "status": "error", 
+                "message": f"Cannot approve payment. Booking is currently '{booking.stat}'"
+            }), 409
+
+        # 3. Fetch the Payment Record
+        payment = PaymentTransaction.query.filter_by(booking_id=booking_id).first()
+        if not payment:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": "Financial record missing"}), 500
+
+        # 4. Fetch the Wallets (We lock these too to prevent race conditions on balances!)
+        customer_wallet = Wallet.query.with_for_update().filter_by(account_id=booking.user_id).first()
+        worker_wallet = Wallet.query.with_for_update().filter_by(account_id=booking.worker_id).first()
+
+        if not customer_wallet or not worker_wallet:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": "Wallet accounts missing. Cannot process payment."}), 500
+
+        # 5. The Math (Deposit Model)
+        # We assume the base_amount (deposit) was already taken at booking time.
+        # Now we only need to deduct the extra charges from the customer.
+        extra_owed = float(payment.total_amount) - float(payment.base_amount)
+
+        # 6. DBMS Constraint Check: Can the customer afford the extra charges?
+        if float(customer_wallet.balance) < extra_owed:
+            db.session.rollback()
+            return jsonify({
+                "status": "error", 
+                "message": f"Insufficient funds. You need ₹{extra_owed} more to approve this bill."
+            }), 402
+        
+
+        COMMISSION_RATE = 0.15 
+        total_payment = float(payment.total_amount)
+        
+        platform_cut = round(total_payment * COMMISSION_RATE, 2)
+        worker_cut = total_payment - platform_cut
+
+        # 7. EXECUTE THE TRANSFER
+        # A. Take the extra money from the customer (they already paid the deposit)
+        customer_wallet.balance = float(customer_wallet.balance) - extra_owed
+        
+        # B. Give the WORKER their 85% share
+        worker_wallet.balance = float(worker_wallet.balance) + worker_cut
+        
+        # C. Give the PLATFORM its 15% share!
+        # You should have a master 'Admin' wallet in your database to hold platform profits.
+        # Assuming you have an Admin account with ID 'ADMIN-1':
+        admin_wallet = Wallet.query.with_for_update().filter_by(account_id='ADMIN-1').first()
+        if admin_wallet:
+            admin_wallet.balance = float(admin_wallet.balance) + platform_cut
+        
+        # D. Update the Receipt
+        payment.escrow_status = 'RELEASED'
+        
+        # E. Finalize the Booking
+        booking.stat = 'completed'
+
+        # 8. COMMIT EVERYTHING AT ONCE
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Payment approved! The worker has been paid and the job is complete.",
+            "receipt": {
+                "total_paid": float(payment.total_amount),
+                "escrow_status": payment.escrow_status
+            }
+        }), 200
+
+    except OperationalError as e:
+        db.session.rollback()
+        if "1205" in str(e):
+            return jsonify({"status": "error", "message": "Row locked. Try again."}), 409
+        return jsonify({"status": "error", "message": "Database busy"}), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+
+
+
+@bookings_bp.route('/update-worker-services', methods=['POST'])
+@token_required
+@role_required(['worker'])
+def update_worker_services(current_user):
+    data = request.get_json(silent=True) or {}
+    services_list = data.get('services', [])
+
+    if not isinstance(services_list, list) or len(services_list) == 0:
+        return jsonify({"status": "error", "message": "Please provide a list of services."}), 400
+
+    try:
+        worker_id = current_user['user_id']
+        added_count = 0
+
+        # Loop through what the frontend sent
+        for item in services_list:
+            srv_id = item.get('service_id')
+            price = item.get('base_price')
+            p_type = item.get('price_type', 'fixed')
+
+            if not srv_id or price is None:
+                continue # Skip invalid entries
+            
+            # 1. DBMS Check: Does this service actually exist in the master list?
+            # (We don't want workers inventing fake services)
+            master_service = Service.query.get(srv_id)
+            if not master_service:
+                continue 
+
+            # 2. Check if the worker already offers this service (to avoid duplicate Primary Key errors)
+            existing_link = WorkerService.query.filter_by(
+                worker_id=worker_id, 
+                service_id=srv_id
+            ).first()
+
+            if existing_link:
+                # If they already have it, maybe they are just updating their price!
+                existing_link.base_price = float(price)
+                existing_link.price_type = p_type
+            else:
+                # 3. Create the new bridge!
+                new_link = WorkerService(
+                    worker_id=worker_id,
+                    service_id=srv_id,
+                    base_price=float(price),
+                    price_type=p_type
+                )
+                db.session.add(new_link)
+                added_count += 1
+
+        # Commit all the new links and price updates at once
+        db.session.commit()
+
+        return jsonify({
+            "status": "success", 
+            "message": f"Successfully synced services. Added {added_count} new skills!"
+        }), 200
+
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500

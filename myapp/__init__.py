@@ -15,11 +15,17 @@ from .models.worker_services import WorkerService
 from .models.booking import Booking
 from .models.payment_transaction import PaymentTransaction
 from .models.review import Review
+from flask_cors import CORS
 
 def create_app():
     # 1. Initialize the app
     app = Flask(__name__)
-    CORS(app)
+
+
+    CORS(app, 
+         supports_credentials=True, 
+         origins=["http://localhost:5173"] # Put your React URL here
+    )
     
     # 2. Configure the database.   make sure to have DATABASE_URL and SECRET_KEY in .env
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
