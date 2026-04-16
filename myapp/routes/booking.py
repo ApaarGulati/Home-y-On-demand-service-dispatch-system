@@ -9,6 +9,8 @@ from sqlalchemy.exc import OperationalError
 from myapp.models.booking import Booking
 from myapp.models.app_user import AppUser 
 from myapp.models.address import Address 
+from myapp.models.worker import Worker 
+
 from myapp.models.payment_transaction import PaymentTransaction
 from myapp.models.worker_services import WorkerService
 from myapp.middleware.auth_middleware import token_required, role_required
@@ -481,8 +483,12 @@ def approve_completion(current_user):
             return jsonify({"status": "error", "message": "Financial record missing"}), 500
 
         # 4. Fetch the Wallets (We lock these too to prevent race conditions on balances!)
-        customer_wallet = Wallet.query.with_for_update().filter_by(account_id=booking.user_id).first()
-        worker_wallet = Wallet.query.with_for_update().filter_by(account_id=booking.worker_id).first()
+        customer = AppUser.query.get(booking.user_id)
+        worker = Worker.query.get(booking.worker_id)
+
+        customer_wallet = Wallet.query.with_for_update().filter_by(account_id=customer.account_id).first()
+        worker_wallet = Wallet.query.with_for_update().filter_by(account_id=worker.account_id).first()
+
 
         if not customer_wallet or not worker_wallet:
             db.session.rollback()
