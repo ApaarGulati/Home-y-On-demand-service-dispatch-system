@@ -107,6 +107,8 @@ def register_account():
         
 
 
+
+
 @auth_bp.route('/login', methods=['POST'])
 def login_account():
     try:
