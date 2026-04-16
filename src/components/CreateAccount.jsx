@@ -9,7 +9,7 @@ const isAlpha = (str) => !(/^[A-Za-z]+$/.test(str));
 
 
 const handlesubmit = async (role, location, fname, mname, lname, phnum, email, passwd) => {
-
+  const navigate=useNavigate()
   if (location.length == 0 || fname.length == 0 || mname.length == 0 || lname.length == 0 || phnum.length == 0 || email.length == 0 || passwd.length == 0) {
     alert("No fields should be left empty. Please ensure.")
     return;
@@ -54,9 +54,18 @@ const handlesubmit = async (role, location, fname, mname, lname, phnum, email, p
   console.log(payload);
   console.log("connecting to the server and fetching response");
   var response = await fetch("http://127.0.0.1:5000/api/auth/register", { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  var jresponse=await response.json();
 
+  if(jresponse.status==="error"){
+    alert(jresponse.message);
+    return;
+  }
 
-  console.log("response lodged")
+  if(jresponse.status==="success"){
+    alert(jresponse.message);
+    navigate("/login")
+    return ;
+  }
 
 
 
