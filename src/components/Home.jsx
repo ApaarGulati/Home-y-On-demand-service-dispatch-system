@@ -5,10 +5,12 @@ import { AnimatedInput } from './AnimatedInput';
 import search from "../assets/search.svg";
 import Carousel from './Carousel';
 import Footer from './Footer';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
 
     var wordarr = ["Search for massages", "Search for Servicing", "Search for Facials"];
+    const navigate=useNavigate();
 
     return (
         <>
@@ -21,7 +23,7 @@ const Home = () => {
 
                 <div className='flex flex-row flex-wrap  gap-4 justify-center'>
                     <AnimatedInput type="text" className="w-100 h-15 pl-2 text-[20px] rounded-xl text  border border-gray-400 bg-white bg-no-repeat bg-left bg-contain focus:outline-2 focus: outline-cyan-500 focus:outline-offset-4 focus:border focus:border-cyan-500 "  placeholders={wordarr}   />
-                    <button className="bg-cyan-500 w-15 h-15 text-center text-white rounded-full  flex flex-row items-center justify-center  font-bold text-[12px] cursor-pointer hover:bg-cyan-700" onClick={()=>navigate("/login")}>
+                    <button className="bg-cyan-500 w-15 h-15 text-center text-white rounded-full  flex flex-row items-center justify-center  font-bold text-[12px] cursor-pointer hover:bg-cyan-700" onClick={()=>navigate("/services")}>
                         <img src={search} className='object-contain h-10 w-10' alt="" />
                     </button>
 
