@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // 1. Import it
+import { useNavigate } from "react-router-dom";
 import { categories } from "./data";
 
 const ServicePage = () => {
   const navigate = useNavigate();
-  // --- NEW: BACKEND DATA STATE ---
+
+  // --- BACKEND DATA STATE ---
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,32 +18,40 @@ const ServicePage = () => {
   const [minRating, setMinRating] = useState(0);
   const [sortBy, setSortBy] = useState("recommended");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 18;
 
-  // --- 1. FETCH DATA FROM FLASK BACKEND ---
+  // --- 1. RESET TO PAGE 1 ON FILTER CHANGE ---
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, minPrice, maxPrice, minRating, sortBy]);
+
+  // --- 2. FETCH DATA FROM FLASK BACKEND (Server-Side Filtering) ---
   useEffect(() => {
     const fetchServices = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          "http://localhost:5000/api/services/get-services",
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          }
-        );
 
-        // 1. Python uses print(), JS uses console.log()!
-        console.log("Raw response object:", response);
+        // Build the URL dynamically based on current state
+        const url = new URL("http://localhost:5000/api/services/get-services");
+        url.searchParams.append("page", currentPage);
 
-        // 2. You MUST parse the JSON when using native fetch()!
+        if (searchTerm) url.searchParams.append("search", searchTerm);
+        if (selectedCategory !== "All")
+          url.searchParams.append("category", selectedCategory);
+
+        url.searchParams.append("min_price", minPrice);
+        url.searchParams.append("max_price", maxPrice);
+        if (minRating > 0) url.searchParams.append("min_rating", minRating);
+
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include", // Required to send the cookie!
+        });
+
         const data = await response.json();
-        console.log("Parsed data:", data);
 
-        // 3. Now we check 'data.status' instead of 'response.data.status'
         if (data.status === "success") {
           setProviders(data.data);
         } else {
@@ -55,55 +64,32 @@ const ServicePage = () => {
       }
     };
 
-    fetchServices();
-  }, []);
+    // Debounce: Wait 300ms after user stops typing to fetch
+    const delayDebounceFn = setTimeout(() => {
+      fetchServices();
+    }, 300);
 
-  // --- RESET TO PAGE 1 ON FILTER CHANGE ---
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory, minPrice, maxPrice, minRating, sortBy]);
-
-  // --- 2. FILTER LOGIC (Updated to match Backend JSON keys) ---
-  const filteredProviders = providers.filter((provider) => {
-    // Backend returns 'title' (e.g., "Deep Tissue Massage") and 'worker_name' (e.g., "by Alice")
-    const matchesSearch =
-      provider.worker_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.title.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Note: If your backend get-services doesn't return 'category', we skip this
-    // or you can add logic to map service_id to a category.
-    // Assuming backend returns a 'category' string for now, or we ignore it if "All".
-    const matchesCategory =
-      selectedCategory === "All" || provider.category === selectedCategory;
-
-    const matchesPrice =
-      provider.price >= minPrice && provider.price <= maxPrice;
-    const matchesRating = provider.rating >= minRating;
-
-    return matchesSearch && matchesCategory && matchesPrice && matchesRating;
-  });
+    return () => clearTimeout(delayDebounceFn);
+  }, [
+    searchTerm,
+    selectedCategory,
+    minPrice,
+    maxPrice,
+    minRating,
+    currentPage,
+  ]);
 
   // --- 3. SORT LOGIC ---
-  const sortedAndFilteredProviders = [...filteredProviders].sort((a, b) => {
+  // The backend gives us exactly the 18 items we need, so we just sort them locally
+  const currentProviders = [...providers].sort((a, b) => {
     if (sortBy === "price-asc") return a.price - b.price;
     if (sortBy === "price-desc") return b.price - a.price;
     if (sortBy === "rating-desc") return b.rating - a.rating;
-    return 0; // recommended
+    return 0; // "recommended" keeps the backend's default distance sorting
   });
 
-  // --- PAGINATION MATH ---
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProviders = sortedAndFilteredProviders.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-  const totalPages = Math.ceil(
-    sortedAndFilteredProviders.length / itemsPerPage
-  );
-
   // --- LOADING & ERROR UI ---
-  if (loading) {
+  if (loading && providers.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-cyan-500"></div>
@@ -116,8 +102,6 @@ const ServicePage = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-950 gap-4">
         <h2 className="text-2xl font-bold text-red-500">Oops!</h2>
         <p className="text-gray-600 dark:text-gray-400">{error}</p>
-
-        {/* 3. Use it in the button! */}
         <button
           onClick={() => navigate("/login")}
           className="px-6 py-2 bg-cyan-500 text-white rounded-lg font-bold"
@@ -221,14 +205,11 @@ const ServicePage = () => {
                   className="group bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full"
                 >
                   <div className="relative overflow-hidden rounded-xl h-48 mb-4">
-                    {/* Using the Pravatar image we set up in the backend! */}
                     <img
                       src={provider.image}
                       alt={provider.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
-
-                    {/* Display exact distance from user */}
                     <div className="absolute top-2 left-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-cyan-600 uppercase tracking-tighter">
                       {provider.distance_km} km away
                     </div>
@@ -260,12 +241,12 @@ const ServicePage = () => {
                     </div>
                   </div>
 
-                  {/* NOTE: We will wire this button up to POST /book-service next! */}
+                  {/* NOTE: Wired up to pass provider data to Checkout! */}
                   <button
                     onClick={() =>
-                      console.log(
-                        `Ready to book ${provider.worker_id} for ${provider.service_id}!`
-                      )
+                      navigate("/checkout", {
+                        state: { service: provider },
+                      })
                     }
                     className="w-full mt-5 py-3 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-white font-bold rounded-xl hover:bg-cyan-500 hover:text-white transition-all duration-300"
                   >
@@ -281,8 +262,6 @@ const ServicePage = () => {
               </div>
             )}
           </div>
-
-          {/* Pagination omitted for brevity, keeping your exact same logic! */}
         </div>
       </div>
     </div>

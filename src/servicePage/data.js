@@ -1,11 +1,20 @@
 // Updated Categories
-export const categories = [
-  "All",
-  "Massage",
-  "Servicing",
-  "Facials",
-  "Cleaning",
-  "Beauty",
+export const categories = [,
+"Air Conditioning Maintenance              ",
+"Appliance Repair (Washing Machine/Fridge) ",
+"Aromatherapy Relaxation                   ",
+"Carpentry & Furniture Assembly            ",
+"Deep Home Cleaning                        ",
+"Deep Tissue Massage                       ",
+"Electrical Wiring & Fixes                 ",
+"Interior House Painting                   ",
+"Men's Haircut & Grooming                  ",
+"Pest Control Services                     ",
+"Plumbing Diagnostics & Repair             ",
+"RO Water Purifier Repair                  ",
+"Salon at Home (Women)                     ",
+"Sofa & Carpet Cleaning                    ",
+"Sports Recovery Massage",
 ];
 
 // Expanded Dummy Data (24 items) with Review Counts
