@@ -104,37 +104,6 @@ const CreateAccount = () => {
       console.error("Registration Error:", error);
     }
 
-    var payload = {
-      "email": email,
-      "password": passwd,
-      "role_type": (role == "consumer" ? "app_user" : "worker"),
-      "phone": parseInt(phnum),
-      "first_name": fname,
-      "middle_name": mname,
-      "last_name": lname,
-      "longitude": parseFloat(arr[1].trim()),
-      "latitude": parseFloat(arr[0].trim())
-    }
-
-
-    console.log(payload);
-    console.log("connecting to the server and fetching response");
-    var response = await fetch("http://127.0.0.1:5000/api/auth/register", { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    
-    const jresponse= await response.json();
-
-    if (jresponse.status === "error") {
-      alert(jresponse.message);
-      return;
-    }
-
-    if (jresponse.status === "success") {
-      alert(jresponse.message);
-      navigate("/login")
-      return;
-    }
-
-
 
   }
 

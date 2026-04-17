@@ -48,7 +48,7 @@ const Usernav = (props) => {
 
                 {/* Action Button & Hamburger */}
                 <div className="flex items-center gap-4">
-                    <button className="hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer">
+                    <button className="hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer" onClick={()=>navigate("/")}>
                         Logout
                     </button>
 
