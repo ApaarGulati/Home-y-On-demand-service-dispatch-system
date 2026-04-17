@@ -103,7 +103,11 @@ const CreateAccount = () => {
       );
       console.error("Registration Error:", error);
     }
-  };
+
+
+  }
+
+
 
   const handleGetLocation = () => {
     // 1. Prevent overlapping requests if we are already fetching

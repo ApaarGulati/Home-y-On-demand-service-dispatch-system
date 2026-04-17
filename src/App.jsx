@@ -12,6 +12,8 @@ import Login from "./components/Login";
 import CreateAccount from "./components/CreateAccount";
 import Checkout from "./components/Checkout";
 import OrderConfirmed from "./components/OrderConfirmed";
+import Home from "./components/Home";
+import Usernav from "./components/Usernav";
 import axios from "axios";
 
 // 1. Set the exact base URL of your Flask server
@@ -45,8 +47,8 @@ function App() {
           path="/services"
           element={
             <>
+              <Usernav page="Book now"/>
               <ServicePage />
-              <Footer />
             </>
           }
         />
@@ -56,9 +58,8 @@ function App() {
           path="/appointments"
           element={
             <>
-              <Navbar />
+              <Usernav page="Bookings" />
               <AppointmentPage />
-              <Footer />
             </>
           }
         />
@@ -66,9 +67,8 @@ function App() {
           path="/profile"
           element={
             <>
-              <Navbar />
+              <Usernav page="Profile"/>
               <ProfilePage />
-              <Footer />
             </>
           }
         />
@@ -97,6 +97,12 @@ function App() {
         <Route path="/orderconfirmed" element={
           <>
             <OrderConfirmed/>
+          </>
+        }/>
+
+        <Route path="/home" element={
+          <>
+            <Home/>
           </>
         }/>
 

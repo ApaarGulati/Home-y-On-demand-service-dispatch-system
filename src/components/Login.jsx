@@ -1,11 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+
+
+
+
+
+
+
 import Navbar from "./Navbar";
 
 const Login = () => {
+
+
+
+
+
+
+
   const navigate = useNavigate();
   const [email, setemail] = useState("");
   const [passwd, setpasswd] = useState("");
+
+
+
+
+
+
 
   const handlesubmit = async (email, password) => {
     if (email.length == 0 || password.length == 0) {
@@ -20,6 +41,9 @@ const Login = () => {
 
     var payload = {
       email: email,
+
+
+
       password: password,
     };
 
@@ -31,6 +55,13 @@ const Login = () => {
     });
     // if(!response.ok){
     //   alert("An error occurred. Please try again.")
+
+
+
+
+
+
+
     // }
 
     const translation = await response.json();
@@ -38,12 +69,25 @@ const Login = () => {
     if (translation.status === "error") {
       alert(translation.message);
       return;
+
+
+
     }
 
     if (translation.status === "success") {
       // alert(translation.message);
+
+
+
+
       navigate("/services");
+
+
+
+
+
     }
+
   };
 
   return (
@@ -52,8 +96,16 @@ const Login = () => {
       {/* Container: Changed h-146 to min-h-screen to ensure it covers the page */}
       <div className="min-h-screen w-full flex flex-col items-center justify-center py-10 px-4 ">
         {/* Card Wrapper: This adds the "anchor" we discussed */}
+
+
+
+
+
         <div className="w-full max-w-md bg-white dark:bg-transparent p-8 rounded-3xl shadow-2xl flex flex-col gap-8">
           {/* Title: Adjusted text size for mobile */}
+
+
+
           <h1 className="text-3xl md:text-4xl font-extrabold dark:text-white text-center text-gray-800">
             Login
           </h1>
@@ -116,6 +168,7 @@ const Login = () => {
             >
               Create Account
             </button>
+
           </div>
         </div>
       </div>
