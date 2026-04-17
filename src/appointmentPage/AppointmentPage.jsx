@@ -75,7 +75,7 @@ const BookingCard = ({ booking }) => {
 
   return (
     <ScrollFadeIn>
-      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-6 items-start md:items-center">
+      <div className="bg-transparent border border-gray-100 dark:border-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-6 items-start md:items-center">
         {/* 1. Image & Primary Service Info */}
         <div className="flex items-center gap-4 w-full md:w-1/3">
           <img
@@ -167,7 +167,7 @@ const AppointmentPage = () => {
   const tabs = ["All", "Ongoing", "Completed", "Cancelled"];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pt-24 pb-16">
+    <div className="min-h-screen bg-transparent transition-colors duration-300 pt-24 pb-16">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* Header Section */}
         <ScrollFadeIn>

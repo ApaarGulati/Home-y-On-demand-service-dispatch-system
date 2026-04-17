@@ -11,12 +11,13 @@ import Testimonialcard from './Testimonialcard'
 import ScrollFadeIn from './ScrollFadeIn'
 import { AnimatedInput } from './AnimatedInput'
 import worker from "../assets/workerworking.png"
+import { useNavigate } from 'react-router-dom'
 
 
 const Landing = () => {
 
     var wordarr = ["Search for massages", "Search for Servicing", "Search for Facials"];
-
+    const navigate=useNavigate();
 
 
 
@@ -43,8 +44,8 @@ const Landing = () => {
                 </div>
 
                 <div className='flex flex-row flex-wrap  gap-4 justify-center'>
-                    <AnimatedInput type="text" className="w-100 h-15 pl-2 text-[20px] rounded-xl text  border border-gray-400 bg-white focus:border-cyan-500  bg-no-repeat bg-left bg-contain focus:outline-2 focus: outline-cyan-500 focus:outline-offset-4 focus:border focus:border-cyan-500 "  placeholders={wordarr}   />
-                    <button className="bg-cyan-500 w-15 h-15 text-center text-white rounded-full  flex flex-row items-center justify-center  font-bold text-[12px] cursor-pointer hover:bg-cyan-700">
+                    <AnimatedInput type="text" className="w-100 h-15 pl-2 text-[20px] rounded-xl text  border border-gray-400 bg-white bg-no-repeat bg-left bg-contain focus:outline-2 focus: outline-cyan-500 focus:outline-offset-4 focus:border focus:border-cyan-500 "  placeholders={wordarr}   />
+                    <button className="bg-cyan-500 w-15 h-15 text-center text-white rounded-full  flex flex-row items-center justify-center  font-bold text-[12px] cursor-pointer hover:bg-cyan-700" onClick={()=>navigate("/login")}>
                         <img src={search} className='object-contain h-10 w-10' alt="" />
                     </button>
 
