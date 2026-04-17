@@ -105,7 +105,7 @@ const ServicePage = () => {
   // --- LOADING & ERROR UI ---
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-cyan-500"></div>
       </div>
     );
@@ -113,7 +113,7 @@ const ServicePage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-950 gap-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-transparent gap-4">
         <h2 className="text-2xl font-bold text-red-500">Oops!</h2>
         <p className="text-gray-600 dark:text-gray-400">{error}</p>
 
