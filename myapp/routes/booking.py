@@ -73,11 +73,12 @@ def create_booking(current_user):
         customer_wallet = Wallet.query.with_for_update().filter_by(account_id=customer.account_id).first()
         base_price = float(worker_service.base_price)
 
-        if not customer_wallet or float(customer_wallet.balance) < base_price:
+        if not customer_wallet or float(customer_wallet.current_balance) < base_price:
             return jsonify({"status": "error", "message": "Insufficient wallet balance for deposit"}), 402
 
         # Deduct the deposit upfront!
-        customer_wallet.balance = float(customer_wallet.balance) - base_price
+        customer_wallet.current_balance = float(customer_wallet.current_balance) - base_price
+
 
 
         # 4. Transactional Insertion
@@ -98,6 +99,9 @@ def create_booking(current_user):
                     sched_end=s_end,
                     stat='pending' # Explicitly set even if it's the DB default
                 )
+
+
+                print("this part works")
                 
                 base_price = worker_service.base_price
                 # Assuming no tip at booking time
@@ -112,9 +116,11 @@ def create_booking(current_user):
                     escrow_status='HELD'
                 )
 
+
                 db.session.add(new_booking)
                 db.session.add(new_payment)
                 db.session.commit()
+                print("this part doesnt works")
 
                 return jsonify({
                     "status": "success", 
@@ -248,11 +254,12 @@ def get_worker_bookings(current_user):
             Service.service_name,
             Account.first_name,
             Account.last_name,
-            Account.phone_number, # Worker needs to call them!
-            Address.street_address,
+            Account.phone, # Worker needs to call them!
+            Address.state,
+            Address.postal_code,
             Address.city,
-            Address.latitude,
-            Address.longitude,
+            Address.street_line_1,
+            Address.street_line_2,
             PaymentTransaction.total_amount
         ).join(Service, Booking.service_id == Service.service_id) \
          .join(AppUser, Booking.user_id == AppUser.user_id) \
@@ -283,10 +290,8 @@ def get_worker_bookings(current_user):
                 "actual_start": row.actual_start.isoformat() if row.actual_start else None,
                 "customer": {
                     "name": f"{row.first_name} {row.last_name}",
-                    "phone": row.phone_number,
-                    "address": f"{row.street_address}, {row.city}",
-                    "lat": float(row.latitude) if row.latitude else None,
-                    "lng": float(row.longitude) if row.longitude else None
+                    "phone": row.phone,
+                    "address": f"{row.street_line_1}, {row.street_line_2} , {row.city}, {row.state}, {row.postal_code}",
                 },
                 "payout": float(row.total_amount)
             })
@@ -500,7 +505,7 @@ def approve_completion(current_user):
         extra_owed = float(payment.total_amount) - float(payment.base_amount)
 
         # 6. DBMS Constraint Check: Can the customer afford the extra charges?
-        if float(customer_wallet.balance) < extra_owed:
+        if float(customer_wallet.current_balance) < extra_owed:
             db.session.rollback()
             return jsonify({
                 "status": "error", 
@@ -516,17 +521,17 @@ def approve_completion(current_user):
 
         # 7. EXECUTE THE TRANSFER
         # A. Take the extra money from the customer (they already paid the deposit)
-        customer_wallet.balance = float(customer_wallet.balance) - extra_owed
+        customer_wallet.current_balance = float(customer_wallet.current_balance) - extra_owed
         
         # B. Give the WORKER their 85% share
-        worker_wallet.balance = float(worker_wallet.balance) + worker_cut
+        worker_wallet.current_balance = float(worker_wallet.current_balance) + worker_cut
         
         # C. Give the PLATFORM its 15% share!
         # You should have a master 'Admin' wallet in your database to hold platform profits.
         # Assuming you have an Admin account with ID 'ADMIN-1':
         admin_wallet = Wallet.query.with_for_update().filter_by(account_id='ADMIN-1').first()
         if admin_wallet:
-            admin_wallet.balance = float(admin_wallet.balance) + platform_cut
+            admin_wallet.current_balance = float(admin_wallet.current_balance) + platform_cut
         
         # D. Update the Receipt
         payment.escrow_status = 'RELEASED'
