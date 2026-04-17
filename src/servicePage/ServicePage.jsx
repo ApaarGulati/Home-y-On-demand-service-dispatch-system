@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // 1. Import it
 import { categories } from "./data";
 
@@ -25,21 +24,32 @@ const ServicePage = () => {
     const fetchServices = async () => {
       try {
         setLoading(true);
-        // Important: Replace 5000 with your actual Flask port if different
-        const response = await axios.get("http://localhost:5000/get-services", {
-          withCredentials: true, // MANDATORY: Sends the HttpOnly JWT cookie!
-        });
+        const response = await fetch(
+          "http://localhost:5000/api/services/get-services",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
+        );
 
-        if (response.data.status === "success") {
-          setProviders(response.data.data);
+        // 1. Python uses print(), JS uses console.log()!
+        console.log("Raw response object:", response);
+
+        // 2. You MUST parse the JSON when using native fetch()!
+        const data = await response.json();
+        console.log("Parsed data:", data);
+
+        // 3. Now we check 'data.status' instead of 'response.data.status'
+        if (data.status === "success") {
+          setProviders(data.data);
         } else {
-          setError(response.data.message);
+          setError(data.message);
         }
       } catch (err) {
-        // If it fails, they probably aren't logged in (No Cookie)
-        setError(
-          err.response?.data?.message || "Failed to load. Please log in first."
-        );
+        setError(err.message || "Failed to load. Please log in first.");
       } finally {
         setLoading(false);
       }

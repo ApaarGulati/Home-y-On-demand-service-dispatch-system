@@ -12,6 +12,13 @@ import Login from "./components/Login";
 import CreateAccount from "./components/CreateAccount";
 import Checkout from "./components/Checkout";
 import OrderConfirmed from "./components/OrderConfirmed";
+import axios from "axios";
+
+// 1. Set the exact base URL of your Flask server
+axios.defaults.baseURL = "http://localhost:5000";
+
+// 2. Force every single request to send and receive cookies
+axios.defaults.withCredentials = true;
 
 function App() {
   return (
