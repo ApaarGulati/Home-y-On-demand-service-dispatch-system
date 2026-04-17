@@ -151,16 +151,14 @@ def login_account():
                 "message": "Login successful."
             }))
 
-            # 3. Attach the token as an HttpOnly Cookie
             response.set_cookie(
-                'access_token',            # The name of the cookie
-                token,                     # The actual JWT string
-                httponly=True,             # JavaScript CANNOT read this (super secure)
-                secure=False,              # Set to True later when you have HTTPS
-                samesite='Lax',            # Helps prevent CSRF attacks
-                max_age=3600               # Cookie expires in 1 hour (3600 seconds)
+                'access_token', 
+                token, 
+                httponly=True, 
+                samesite='Lax',  # 'Lax' is required for local HTTP development
+                secure=False     # Set to False because we are not using HTTPS locally
             )
-
+            
             return response, 200
 
         return jsonify({"status": "error", "message": "Invalid email or password."}), 401

@@ -31,40 +31,40 @@ def get_services(current_user):
         user = AppUser.query.get(current_user['user_id'])
         user_address = Address.query.filter_by(account_id=user.account_id).first()
         
-        if not user_address or not user_address.latitude or not user_address.longitude:
+        if not user_address or not user.latitude or not user.longitude:
             return jsonify({"status": "error", "message": "Please set your address first to see nearby workers"}), 403
             
-        u_lat = user_address.latitude
-        u_lon = user_address.longitude
+        u_lat = user.latitude
+        u_lon = user.longitude
 
-        # 3. Create an alias for the Worker's Address so it doesn't clash
-        from sqlalchemy.orm import aliased
-        WorkerAddress = aliased(Address)
+        
 
         # 4. The Haversine Formula (Earth's radius in KM is ~6371)
         distance_expr = 6371 * func.acos(
-            func.cos(func.radians(u_lat)) * func.cos(func.radians(WorkerAddress.latitude)) *
-            func.cos(func.radians(WorkerAddress.longitude) - func.radians(u_lon)) +
-            func.sin(func.radians(u_lat)) * func.sin(func.radians(WorkerAddress.latitude))
+            func.least(1.0, 
+                func.cos(func.radians(u_lat)) * func.cos(func.radians(Worker.latitude)) *
+                func.cos(func.radians(Worker.longitude) - func.radians(u_lon)) +
+                func.sin(func.radians(u_lat)) * func.sin(func.radians(Worker.latitude))
+            )
         )
 
-        # 5. Build the Base Query
+        # 5. Build the Base Query (Notice we removed the Address join!)
         query = db.session.query(
-            WorkerService.worker_id,
-            WorkerService.base_price,
-            Service.service_name,
+            Worker.worker_id,
+            Service.service_id,
             Account.first_name,
             Account.last_name,
-            Worker.rating_sum,     
+            Worker.rating_sum,
+            Worker.stat,
             Worker.rating_count,
-            distance_expr.label('distance') # Get the distance back!
-        ).join(Service, WorkerService.service_id == Service.service_id) \
-         .join(Worker, WorkerService.worker_id == Worker.worker_id) \
-         .join(Account, Worker.account_id == Account.account_id) \
-         .join(WorkerAddress, Account.account_id == WorkerAddress.account_id)
-
-        # 6. Apply Filters from UI
-        # A. 5km Distance Limit
+            Service.service_name,
+            WorkerService.base_price,
+            distance_expr.label('distance_km')
+        ).join(Account, Worker.account_id == Account.account_id) \
+         .join(WorkerService, Worker.worker_id == WorkerService.worker_id) \
+         .join(Service, WorkerService.service_id == Service.service_id)
+        
+        # 4. Apply the 5KM Geofence
         query = query.filter(distance_expr <= 5.0)
         
         # B. Search & Category
@@ -76,14 +76,14 @@ def get_services(current_user):
         # C. Price Range
         query = query.filter(WorkerService.base_price.between(min_price, max_price))
 
-        # D. Min Rating (Only filter if they actually selected a rating)
+        # D. Min Rating
         if min_rating > 0:
             query = query.filter((Worker.rating_sum / func.nullif(Worker.rating_count, 0)) >= min_rating)
 
         # 7. Apply Pagination (18 items!)
         offset = (page - 1) * limit
         results = query.offset(offset).limit(limit).all()
-
+        
         # 8. Format the JSON payload for your UI cards
         services_list = []
         for row in results:
@@ -93,13 +93,16 @@ def get_services(current_user):
 
             services_list.append({
                 "worker_id": row.worker_id,
-                "title": f"{row.service_name} by {row.first_name}", # Matches "Deep Tissue Massage"
+                "service_id": row.service_id if hasattr(row, 'service_id') else None, # Helpful to include!
+                "title": f"{row.service_name}", 
                 "worker_name": f"by {row.first_name} {row.last_name}",
                 "price": float(row.base_price),
                 "rating": average_rating,
                 "reviewCount": review_count,
-                "distance_km": round(row.distance, 1), # Nice extra to show the user!
-                "image": consistent_avatar_url# Placeholder for your card images
+                "distance_km": round(row.distance_km, 1), # FIX: Changed from row.distance
+                "image": consistent_avatar_url,
+                "status": row.stat
+
             })
 
         return jsonify({
