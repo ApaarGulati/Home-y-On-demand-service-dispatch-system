@@ -8,11 +8,13 @@ from myapp.extensions import db
 from myapp.models.account import Account
 from myapp.models.app_user import AppUser
 from myapp.models.worker import Worker
+from myapp.models.worker_services import WorkerService
+from myapp.models.services import Service
 from myapp.models.wallet import Wallet
 from myapp.models.address import Address
 
 from sqlalchemy.exc import IntegrityError
-from myapp.middleware.auth_middleware import token_required
+from myapp.middleware.auth_middleware import token_required, role_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from myapp.untils.generate_string import generate_id
 
@@ -193,6 +195,7 @@ def logout_account():
 
 @auth_bp.route('/profile', methods=['GET'])
 @token_required
+@role_required(['app_user'])
 def get_profile(current_user):
     print(current_user)
     try:
@@ -242,3 +245,62 @@ def get_profile(current_user):
 
 
 # register, Booking,  cancelling,  payment,   encash
+
+@auth_bp.route('/workerprofile', methods=['GET'])
+@token_required
+@role_required(['worker'])
+def get_worker_profile(current_user):
+    try:
+        worker_id = current_user.get('user_id')
+         
+        # 1. Fetch Account and Wallet info (Added the Worker Join!)
+        result = db.session.query(
+            Account.first_name,
+            Account.middle_name,
+            Account.last_name,
+            Account.email,
+            Account.phone,
+            Wallet.current_balance
+        ).join(Wallet, Account.account_id == Wallet.account_id)\
+         .join(Worker, Account.account_id == Worker.account_id)\
+         .filter(Worker.worker_id == worker_id).first()
+         
+        if not result:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+        
+        # 2. Fetch Services info (Fixed the joins)
+        services_results = db.session.query(
+            Service.service_name,
+            WorkerService.base_price,
+            WorkerService.price_type
+        ).join(Service, WorkerService.service_id == Service.service_id)\
+         .filter(WorkerService.worker_id == worker_id).all()
+
+        # 3. Format the services into a clean list
+        services_list = []
+        for s in services_results:
+            services_list.append({
+                "name": s.service_name,
+                "price": float(s.base_price) if s.base_price is not None else 0.0,
+                "type": s.price_type  # Changed from s.type to match query
+            })
+
+        # Safely combine the name so you don't get "Rahul None Sharma"
+        name_parts = [result.first_name, result.middle_name, result.last_name]
+        full_name = " ".join([part for part in name_parts if part])
+
+        # 4. Build the final dictionary
+        profile_data = {
+            "profile_pic": f"https://i.pravatar.cc/300?u={worker_id}",
+            "name": full_name,
+            "email": result.email,
+            "phone": result.phone,
+            "current_balance": float(result.current_balance or 0),
+            "services": services_list # <-- Added the services list here!
+        }
+
+        return jsonify({"status": "success", "data": profile_data}), 200
+
+    except Exception as e:
+        print(f"Error fetching profile: {e}")
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
