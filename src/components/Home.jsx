@@ -15,6 +15,9 @@ const Home = () => {
     const [query, setquery] = useState("");
     const [isUser, setisUser] = useState(true);
 
+
+    
+
     const [skills, setSkills] = useState([
         { id: 1, name: "General Plumbing", completed: false },
         { id: 2, name: "Pipe Leakage Repair", completed: true },
