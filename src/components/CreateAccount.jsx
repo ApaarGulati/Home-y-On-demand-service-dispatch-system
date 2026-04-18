@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import Navbar from "./Navbar";
 import { useNavigate } from "react-router-dom";
+import MessageDialog from "./MessageDialog";
+
 
 // Utility functions for validation
 const isNumeric = (val) => !isNaN(val) && Number.isFinite(+val);
@@ -21,6 +23,23 @@ const CreateAccount = () => {
   const [email, setemail] = useState("");
   const [password, setpassword] = useState("");
 
+  const [dialog, setdialog] = useState({ isOpen: false, message: "" });
+
+  const showAlert = (string) => {
+    setDialog({
+      isOpen: true,
+      message: string
+    });
+  };
+
+  const closeDialog = () => {
+    setDialog({ ...dialog, isOpen: false });
+  };
+
+
+
+
+
   // Replaced parameter passing with direct state access and added event (e)
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevents the default page reload
@@ -33,9 +52,7 @@ const CreateAccount = () => {
       !email ||
       !password
     ) {
-      alert(
-        "No required fields should be left empty. Please ensure all fields are filled."
-      );
+      showAlert("No required fields should be left empty. Please ensure all fields are filled.");
       return;
     }
 
@@ -46,21 +63,21 @@ const CreateAccount = () => {
       !isNumeric(arr[0].trim()) ||
       !isNumeric(arr[1].trim())
     ) {
-      alert(
+      showAlert(
         "Kindly enter a valid location in 'Latitude, Longitude' format (e.g., 28.5, 77.2)"
       );
       return;
     }
 
     // Name validation using the corrected isNotAlpha
-    if (isNotAlpha(firstname)){
-      alert("Please enter a valid first and last name (letters only).");
+    if (isNotAlpha(firstname)) {
+      showAlert("Please enter a valid first and last name (letters only).");
       return;
     }
 
     // Phone validation
     if (phonenum.length !== 10 || !isNumeric(phonenum)) {
-      alert("Please enter a valid 10-digit phone number.");
+      showAlert("Please enter a valid 10-digit phone number.");
       return;
     }
 
@@ -88,17 +105,17 @@ const CreateAccount = () => {
       const jresponse = await response.json();
 
       if (jresponse.status === "error") {
-        alert(jresponse.message);
+        showAlert(jresponse.message);
         return;
       }
 
       if (jresponse.status === "success") {
-        alert(jresponse.message);
+        showAlert(jresponse.message);
         navigate("/login");
       }
     } catch (error) {
       // Gracefully handle server downtime or network errors
-      alert(
+      showAlert(
         "Could not connect to the server. Please check your connection or try again later."
       );
       console.error("Registration Error:", error);
@@ -114,7 +131,7 @@ const CreateAccount = () => {
     if (loading) return;
 
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      showAlert("Geolocation is not supported by your browser");
       return;
     }
 
@@ -135,22 +152,22 @@ const CreateAccount = () => {
         // Handle the specific HTML5 Geolocation error codes
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            alert(
+            showAlert(
               "Location access was denied. Please allow location permissions in your browser settings."
             );
             break;
           case error.POSITION_UNAVAILABLE:
-            alert(
+            showAlert(
               "Location information is unavailable. (If you see a 429 in the network tab, it causes this error)."
             );
             break;
           case error.TIMEOUT:
-            alert(
+            showAlert(
               "The request to get your location timed out. Please try again."
             );
             break;
           default:
-            alert("An unknown error occurred while fetching your location.");
+            showAlert("An unknown error occurred while fetching your location.");
             break;
         }
       },
@@ -183,22 +200,20 @@ const CreateAccount = () => {
                 <button
                   type="button"
                   onClick={() => setUserRole("worker")}
-                  className={`flex-1 py-3 rounded-full font-bold border-2 transition-all ${
-                    userRole === "worker"
-                      ? "bg-cyan-500 border-cyan-500 text-white shadow-md"
-                      : "bg-transparent border-gray-200 text-gray-500 hover:border-cyan-200"
-                  }`}
+                  className={`flex-1 py-3 rounded-full font-bold border-2 transition-all ${userRole === "worker"
+                    ? "bg-cyan-500 border-cyan-500 text-white shadow-md"
+                    : "bg-transparent border-gray-200 text-gray-500 hover:border-cyan-200"
+                    }`}
                 >
                   Worker
                 </button>
                 <button
                   type="button"
                   onClick={() => setUserRole("consumer")}
-                  className={`flex-1 py-3 rounded-full font-bold border-2 transition-all ${
-                    userRole === "consumer"
-                      ? "bg-cyan-500 border-cyan-500 text-white shadow-md"
-                      : "bg-transparent border-gray-200 text-gray-500 hover:border-cyan-200"
-                  }`}
+                  className={`flex-1 py-3 rounded-full font-bold border-2 transition-all ${userRole === "consumer"
+                    ? "bg-cyan-500 border-cyan-500 text-white shadow-md"
+                    : "bg-transparent border-gray-200 text-gray-500 hover:border-cyan-200"
+                    }`}
                 >
                   Consumer
                 </button>
@@ -329,7 +344,13 @@ const CreateAccount = () => {
             </button>
           </div>
         </div>
+
       </div>
+      <MessageDialog
+        isOpen={dialog.isOpen}
+        message={dialog.message}
+        onOk={closeDialog}
+      />
     </>
   );
 };

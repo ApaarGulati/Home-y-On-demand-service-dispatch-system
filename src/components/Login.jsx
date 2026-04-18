@@ -1,13 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-
-
-
-
-
-
-
+import MessageDialog from "./MessageDialog";
 import Navbar from "./Navbar";
 
 const Login = () => {
@@ -22,6 +16,19 @@ const Login = () => {
   const [email, setemail] = useState("");
   const [passwd, setpasswd] = useState("");
 
+  const [dialog, setdialog] = useState({ isOpen: false, message: "" });
+  
+    const showAlert = (string) => {
+      setDialog({
+        isOpen: true,
+        message: string
+      });
+    };
+  
+    const closeDialog = () => {
+      setDialog({ ...dialog, isOpen: false });
+    };
+
 
 
 
@@ -30,12 +37,12 @@ const Login = () => {
 
   const handlesubmit = async (email, password) => {
     if (email.length == 0 || password.length == 0) {
-      alert("None of the fields should be empty");
+      showAlert("None of the fields should be empty");
       return;
     }
 
     if (!(email.includes("@") && email.endsWith(".com"))) {
-      alert("Please enter a valid email id");
+      showAlert("Please enter a valid email id");
       return;
     }
 
@@ -67,7 +74,7 @@ const Login = () => {
     const translation = await response.json();
 
     if (translation.status === "error") {
-      alert(translation.message);
+      showAlert(translation.message);
       return;
 
 
@@ -174,6 +181,11 @@ const Login = () => {
           </div>
         </div>
       </div>
+      <MessageDialog
+        isOpen={dialog.isOpen}
+        message={dialog.message}
+        onOk={closeDialog}
+      />
     </>
   );
 };

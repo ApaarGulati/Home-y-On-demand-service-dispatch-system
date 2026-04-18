@@ -9,6 +9,9 @@ import {
   Timer,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import MessageDialog from "./MessageDialog";
+
+
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -24,6 +27,19 @@ const Checkout = () => {
   const [bookingTime, setBookingTime] = useState("10:00");
   const [duration, setDuration] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [dialog, setdialog] = useState({ isOpen: false, message: "" });
+
+  const showAlert = (string) => {
+    setDialog({
+      isOpen: true,
+      message: string
+    });
+  };
+
+  const closeDialog = () => {
+    setDialog({ ...dialog, isOpen: false });
+  };
 
   // Safety check for direct URL access
   if (!service) {
@@ -47,9 +63,9 @@ const Checkout = () => {
   const handleApplyCoupon = () => {
     if (coupon.toUpperCase() === "SAVE100") {
       setDiscount(100);
-      alert("Coupon Applied! ₹100 discounted.");
+      showAlert("Coupon Applied! ₹100 discounted. ")
     } else {
-      alert("Invalid Coupon code");
+      showAlert("Invalid Coupon code")
     }
   };
 
@@ -88,11 +104,11 @@ const Checkout = () => {
         navigate("/home");
       } else {
         // This catches 401 Unauthorized or 403 Forbidden (Role Issues)
-        alert(data.message || `Error ${response.status}: Booking failed.`);
+        showAlert(data.message || `Error ${response.status}: Booking failed.`);
       }
     } catch (err) {
       console.error("Checkout Error:", err);
-      alert("Network Error: Could not connect to backend.");
+      showAlert("Network Error: Could not connect to backend.")
     } finally {
       setIsSubmitting(false);
     }
@@ -235,9 +251,8 @@ const Checkout = () => {
           <button
             disabled={isSubmitting}
             onClick={handlePayNow}
-            className={`w-full py-4 bg-cyan-500 hover:bg-cyan-600 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-cyan-500/20 transition-all ${
-              isSubmitting ? "opacity-70 cursor-not-allowed" : "active:scale-95"
-            }`}
+            className={`w-full py-4 bg-cyan-500 hover:bg-cyan-600 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-cyan-500/20 transition-all ${isSubmitting ? "opacity-70 cursor-not-allowed" : "active:scale-95"
+              }`}
           >
             {isSubmitting ? (
               <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
@@ -249,6 +264,11 @@ const Checkout = () => {
           </button>
         </div>
       </div>
+      <MessageDialog
+        isOpen={dialog.isOpen}
+        message={dialog.message}
+        onOk={closeDialog}
+      />
     </div>
   );
 };

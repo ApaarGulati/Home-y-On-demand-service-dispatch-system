@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import ScrollFadeIn from "../components/ScrollFadeIn";
 
+import MessageDialog from "../components/MessageDialog";
+
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -20,6 +23,21 @@ const ProfilePage = () => {
   const [showFundsModal, setShowFundsModal] = useState(false);
   const [fundAmount, setFundAmount] = useState("");
   const [isProcessingFunds, setIsProcessingFunds] = useState(false);
+
+  const [dialog, setdialog] = useState({ isOpen: false, message: "" });
+
+  const showAlert = (string) => {
+    setDialog({
+      isOpen: true,
+      message: string
+    });
+  };
+
+  const closeDialog = () => {
+    setDialog({ ...dialog, isOpen: false });
+  };
+
+
 
   // State for the actual saved data
   const [userData, setUserData] = useState({
@@ -92,12 +110,12 @@ const ProfilePage = () => {
       if (data.status === "success") {
         setUserData({ ...formData });
         setIsEditing(false);
-        alert("Profile updated successfully!");
+        showAlert("Profile updated successfully!");
       } else {
-        alert(data.message || "Update failed");
+        showAlert(data.message || "Update failed");
       }
     } catch (err) {
-      alert("Failed to connect to server");
+      showAlert("Failed to connect to server");
     }
   };
 
@@ -105,7 +123,7 @@ const ProfilePage = () => {
   const submitAddFunds = async () => {
     const amount = parseFloat(fundAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid positive amount.");
+      showAlert("Please enter a valid positive amount.");
       return;
     }
 
@@ -127,10 +145,10 @@ const ProfilePage = () => {
         setShowFundsModal(false); // Closes the popup
         setFundAmount(""); // Resets the input field
       } else {
-        alert(data.message);
+        showAlert(data.message);
       }
     } catch (err) {
-      alert("Failed to process transaction.");
+      showAlert("Failed to process transaction.");
     } finally {
       setIsProcessingFunds(false);
     }
@@ -164,11 +182,10 @@ const ProfilePage = () => {
           onChange={handleInputChange}
           disabled={!isEditing}
           rows="3"
-          className={`p-3 rounded-xl border transition-all resize-none ${
-            isEditing
+          className={`p-3 rounded-xl border transition-all resize-none ${isEditing
               ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:border-cyan-500 outline-none dark:text-white"
               : "bg-gray-50 dark:bg-gray-900 border-transparent text-gray-800 dark:text-gray-200 cursor-not-allowed"
-          }`}
+            }`}
         />
       ) : (
         <input
@@ -177,11 +194,10 @@ const ProfilePage = () => {
           value={formData[name]}
           onChange={handleInputChange}
           disabled={!isEditing || name === "email"} // Email is usually locked
-          className={`p-3 rounded-xl border transition-all ${
-            isEditing && name !== "email"
+          className={`p-3 rounded-xl border transition-all ${isEditing && name !== "email"
               ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:border-cyan-500 outline-none dark:text-white"
               : "bg-gray-50 dark:bg-gray-900 border-transparent text-gray-800 dark:text-gray-200 cursor-not-allowed"
-          }`}
+            }`}
         />
       )}
     </div>
@@ -358,6 +374,11 @@ const ProfilePage = () => {
           </div>
         </div>
       )}
+      <MessageDialog
+        isOpen={dialog.isOpen}
+        message={dialog.message}
+        onOk={closeDialog}
+      />
     </div>
   );
 };

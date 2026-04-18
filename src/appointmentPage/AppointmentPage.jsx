@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ScrollFadeIn from "../components/ScrollFadeIn";
+import MessageDialog from "../components/MessageDialog";
 
 // 1. ADDED 'onFinalize' to the destructured props
 const BookingCard = ({ booking, onFinalize }) => {
@@ -74,9 +75,8 @@ const BookingCard = ({ booking, onFinalize }) => {
             </span>
             <div className="flex items-center gap-1">
               <span
-                className={`text-xs font-bold ${
-                  booking.is_final ? "text-green-600" : "text-cyan-600"
-                }`}
+                className={`text-xs font-bold ${booking.is_final ? "text-green-600" : "text-cyan-600"
+                  }`}
               >
                 ₹{booking.price}
               </span>
@@ -148,6 +148,20 @@ const AppointmentPage = () => {
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+
+  const [dialog, setdialog] = useState({ isOpen: false, message: "" });
+
+  const showAlert = (string) => {
+    setDialog({
+      isOpen: true,
+      message: string
+    });
+  };
+
+  const closeDialog = () => {
+    setDialog({ ...dialog, isOpen: false });
+  };
 
   // 3. ADDED REFRESH FUNCTION
   const fetchMyAppointments = async () => {
@@ -226,14 +240,14 @@ const AppointmentPage = () => {
 
       const result = await response.json();
       if (result.status === "success") {
-        alert("Payment successful and review submitted!");
+        showAlert("Payment successful and review submitted!");
         handleCloseModal();
         fetchMyAppointments(); // Refresh the list to show as 'Completed'
       } else {
-        alert(result.message || "Failed to finalize booking");
+        showAlert(result.message || "Failed to finalize booking");
       }
     } catch (err) {
-      alert("An error occurred while finalizing.");
+      showAlert("An error occurred while finalizing.");
     } finally {
       setIsSubmitting(false);
     }
@@ -261,11 +275,10 @@ const AppointmentPage = () => {
             <button
               key={tab}
               onClick={() => setFilter(tab)}
-              className={`px-6 py-2 rounded-full font-bold text-sm transition-all shrink-0 ${
-                filter === tab
+              className={`px-6 py-2 rounded-full font-bold text-sm transition-all shrink-0 ${filter === tab
                   ? "bg-cyan-500 text-white"
                   : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -323,9 +336,8 @@ const AppointmentPage = () => {
                     <button
                       key={star}
                       onClick={() => setRating(star)}
-                      className={`text-3xl transition-transform active:scale-90 ${
-                        rating >= star ? "grayscale-0" : "grayscale opacity-30"
-                      }`}
+                      className={`text-3xl transition-transform active:scale-90 ${rating >= star ? "grayscale-0" : "grayscale opacity-30"
+                        }`}
                     >
                       ⭐
                     </button>
@@ -367,6 +379,11 @@ const AppointmentPage = () => {
           </div>
         </div>
       )}
+      <MessageDialog
+        isOpen={dialog.isOpen}
+        message={dialog.message}
+        onOk={closeDialog}
+      />
     </div>
   );
 };
