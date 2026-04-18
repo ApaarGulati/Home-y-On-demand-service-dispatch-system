@@ -140,7 +140,6 @@ def create_booking(current_user):
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-        
 @bookings_bp.route('/decline-booking', methods=['POST'])
 @token_required
 @role_required(['worker'])
@@ -152,7 +151,7 @@ def decline_booking(current_user):
         return jsonify({"status": "error", "message": "booking_id is required"}), 400
 
     try:
-        # FIX 1: Ensure this worker owns this booking
+        # 1. Lock the booking row to prevent concurrent status changes
         booking = Booking.query.with_for_update().filter_by(
             booking_id=booking_id,
             worker_id=current_user['user_id'] 
@@ -160,33 +159,53 @@ def decline_booking(current_user):
 
         if not booking:
             return jsonify({"status": "error", "message": "Booking not found or unauthorized"}), 404
-        
+         
         if booking.stat != 'pending':
-            db.session.rollback()
             return jsonify({
                 "status": "error", 
-                "message": f"Conflict: Cannot decline a booking in '{booking.stat}' state"
+                "message": f"Conflict: Booking is already '{booking.stat}'"
             }), 409
+
+        # 2. Find the payment transaction
+        transaction = PaymentTransaction.query.filter_by(booking_id=booking_id).first()
+        if not transaction:
+             return jsonify({"status": "error", "message": "Transaction record not found"}), 404
         
+        if transaction.escrow_status == 'REFUNDED':
+             return jsonify({"status": "error", "message": "Transaction already refunded"}), 400
+
+        # 3. Resolve IDs: booking.user_id (AppUser) -> account_id (Wallet)
+        customer_user = AppUser.query.filter_by(user_id=booking.user_id).first()
+        if not customer_user:
+            raise Exception("Customer user profile not found")
+        
+        # 4. Lock and Update the Customer Wallet with 100% of the amount
+        customer_wallet = Wallet.query.with_for_update().filter_by(account_id=customer_user.account_id).first()
+        
+        if not customer_wallet:
+             raise Exception("Customer wallet not found. Please contact support.")
+
+        # Full refund math
+        customer_wallet.current_balance += transaction.total_amount
+
+        # 5. Finalize database states
         booking.stat = 'declined'
+        transaction.escrow_status = 'REFUNDED'
+        
         db.session.commit()
+                                                                              
+        return jsonify({
+            "status": "success", 
+            "message": f"Booking declined. Full refund of ₹{transaction.total_amount} processed."
+        }), 200
         
-        # FIX 3: Correct message
-        return jsonify({"status": "success", "message": "Booking declined"}), 200
-        
-    except OperationalError as e:
+    except OperationalError:
         db.session.rollback()
-        if "1205" in str(e):
-            return jsonify({
-                "status": "error", 
-                "message": "DBMS Conflict: This row is locked by another user. Request timed out."
-            }), 409
-        return jsonify({"status": "error", "message": "Database busy", "details": str(e)}), 500
-   
+        return jsonify({"status": "error", "message": "Database is busy. Please try again in a moment."}), 409
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
-
+    
 
 @bookings_bp.route('/accept-booking', methods=['POST'])
 @token_required
@@ -625,3 +644,60 @@ def update_worker_services(current_user):
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+
+from sqlalchemy import and_
+from sqlalchemy.orm import aliased
+
+@bookings_bp.route('/my-appointments', methods=['GET'])
+@token_required
+def get_user_appointments(current_user):
+    try:
+        user_id = current_user.get('user_id')
+        
+        results = db.session.query(
+            Booking.booking_id,
+            Booking.sched_start,
+            Booking.stat,
+            Service.service_name,
+            WorkerService.base_price.label('est_price'),
+            PaymentTransaction.total_amount.label('final_amount'), # From Transaction Table
+            Account.first_name,
+            Account.middle_name,
+            Account.last_name,
+            Worker.worker_id
+        ).join(Service, Booking.service_id == Service.service_id)\
+         .join(Worker, Booking.worker_id == Worker.worker_id)\
+         .join(Account, Worker.account_id == Account.account_id)\
+         .join(WorkerService, and_(
+             Worker.worker_id == WorkerService.worker_id,
+             Service.service_id == WorkerService.service_id
+         ))\
+         .outerjoin(PaymentTransaction, Booking.booking_id == PaymentTransaction.booking_id)\
+         .filter(Booking.user_id == user_id)\
+         .order_by(Booking.sched_start.desc()).all()
+
+        bookings_list = []
+        for r in results:
+            # Logic: If final_amount exists (completed/paid), use it. 
+            # Otherwise, show the estimated base_price.
+            display_price = r.final_amount if r.final_amount is not None else r.est_price
+            
+            bookings_list.append({
+                "profile": f"https://i.pravatar.cc/300?u={r.worker_id}",
+                "booking_id": r.booking_id,
+                "sched_start": r.sched_start.isoformat() if r.sched_start else None,
+                "stat": r.stat,
+                "service_name": r.service_name,
+                "price": float(display_price),
+                "is_final": r.final_amount is not None, # Tell frontend if this is the "final" bill
+                "worker_name": f"{r.first_name} {r.middle_name} {r.last_name}" 
+            })
+
+        return jsonify({"status": "success", "data": bookings_list}), 200
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return jsonify({"status": "error", "message": "Failed to fetch appointments"}), 500
+    

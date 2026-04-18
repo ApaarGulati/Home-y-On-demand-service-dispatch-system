@@ -8,6 +8,9 @@ from myapp.extensions import db
 from myapp.models.account import Account
 from myapp.models.app_user import AppUser
 from myapp.models.worker import Worker
+from myapp.models.wallet import Wallet
+from myapp.models.address import Address
+
 from sqlalchemy.exc import IntegrityError
 from myapp.middleware.auth_middleware import token_required
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -189,20 +192,52 @@ def logout_account(current_user):
     return response, 200
 
 @auth_bp.route('/profile', methods=['GET'])
-@token_required # wrapper we made
+@token_required
 def get_profile(current_user):
+    try:
+        
+        user_id = current_user.get('user_id')
     
-    # Notice how we accept 'current_user' as an argument? 
-    user_role = current_user['role']
-    specific_id = current_user['user_id']
-    
-    return jsonify({
-        "status": "success",
-        "message": f"Welcome to the vault! You are a {user_role}.",
-        "your_id": specific_id
-    }), 200
+        # Join Account with AppUser and Wallet using the account_id link
+        result = db.session.query(
+            Account.first_name,
+            Account.middle_name,
+            Account.last_name,
+            Account.email,
+            Account.phone,
+        
+            Wallet.current_balance,
 
+            Address.state,
+            Address.street_line_1,
+            Address.street_line_2,
+            Address.city,
+            Address.country,
+            Address.postal_code,
+            
+            
+        ).join(Wallet, Account.account_id == Wallet.account_id)\
+         .join(Address, Account.account_id == Address.account_id)\
+         .filter(AppUser.user_id == user_id ).first()
+         
 
+        if not result:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+
+        profile_data = {
+            "name": f"{result.first_name} {result.middle_name} {result.last_name}",
+            "email": result.email,
+            "phone": result.phone,
+
+            "address": f"{result.street_line_1} {result.street_line_2} {result.city} {result.state}-{result.postal_code} {result.country}",
+
+            "current_balance": result.current_balance
+        }
+
+        return jsonify({"status": "success", "data": profile_data}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # register, Booking,  cancelling,  payment,   encash
