@@ -24,6 +24,10 @@ const BookingCard = ({ booking }) => {
         return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800";
       case "cancelled":
         return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border border-red-200 dark:border-red-800";
+      case "declined":
+        return "bg-red-100 text-red-700 dark:bg-red-800/40 dark:text-red-400 border border-red-200 dark:border-red-800";
+      case "accepted":
+        return "bg-green-100 text-green-500 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800";
       default:
         return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
     }
@@ -34,9 +38,7 @@ const BookingCard = ({ booking }) => {
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 sm:p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6 items-start md:items-center">
         <div className="flex items-center gap-4 w-full md:w-1/3">
           <img
-            src={
-              booking.profile
-            }
+            src={booking.profile}
             alt={booking.worker_name}
             className="w-16 h-16 rounded-full object-cover border-2 border-gray-100 dark:border-gray-800 shrink-0"
           />
@@ -86,19 +88,45 @@ const BookingCard = ({ booking }) => {
           </div>
         </div>
 
+        <div>
+          {booking.stat === "payment_pending" && (
+            <button
+              onClick={() => onFinalize(booking)} // Pass the booking to the parent state
+              className="bg-cyan-500 text-white px-7 py-3 rounded-xl text-xs font-black hover:bg-cyan-600 transition-all shadow-lg shadow-cyan-500/20 "
+            >
+              Finalize & Pay
+            </button>
+          )}
+        </div>
+        <div>
+          <span> </span>
+        </div>
+        <div>
+          <span> </span>
+        </div>
+
         <div className="flex flex-row md:flex-col items-center md:items-end gap-3 w-full md:w-1/4 justify-between mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800">
           <span
             className={`px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${getStatusStyle(
               booking.stat
             )}`}
           >
-            {booking.stat}
+            {booking.stat.replace("_", " ")}
           </span>
 
+          {/* --- NEW ACTION BUTTONS --- */}
+
+          {/* If worker marked it as done, user sees 'Finalize' */}
+
           {booking.stat === "pending" && (
-            <button className="text-cyan-600 dark:text-cyan-400 font-bold text-sm hover:underline flex items-center gap-1">
-              <span className="animate-pulse h-2 w-2 bg-cyan-500 rounded-full inline-block"></span>
-              Awaiting Worker
+            <span className="text-[10px] text-gray-400 font-bold italic">
+              Awaiting worker...
+            </span>
+          )}
+
+          {booking.stat === "completed" && !booking.has_review && (
+            <button className="text-cyan-600 dark:text-cyan-400 font-bold text-xs hover:underline">
+              View Receipt
             </button>
           )}
         </div>
@@ -199,3 +227,7 @@ const AppointmentPage = () => {
 };
 
 export default AppointmentPage;
+
+
+
+
