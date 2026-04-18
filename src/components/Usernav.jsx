@@ -93,13 +93,7 @@ const Usernav = (props) => {
 
           {/* Action Button & Hamburger */}
           <div className="flex items-center gap-4">
-            <button
-              className="hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-
+          {user_role.length==0?<button className="hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer" onClick={handleLogout}>Logout</button>:<button className='hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer' onClick={()=>navigate("/login")}>Login</button>}
             {/* Mobile Toggle */}
             <button
               className="md:hidden dark:text-white text-black"
