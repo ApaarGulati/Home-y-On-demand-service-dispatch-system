@@ -4,8 +4,61 @@ import Usernav from "../components/Usernav";
 
 const WorkerBookings = () => {
   const [bookings, setBookings] = useState([]);
-  const [activeTab, setActiveTab] = useState("pending"); // 'pending' or 'history'
+  const [activeTab, setActiveTab] = useState("pending");
   const [loading, setLoading] = useState(false);
+
+  // --- CUSTOM MODAL STATE ---
+  const [modal, setModal] = useState({
+    isOpen: false,
+    type: "alert", // 'alert', 'confirm', or 'prompt'
+    title: "",
+    message: "",
+    inputValue: "0",
+    onConfirm: null,
+  });
+
+  // Modal Helper Functions
+  const showAlert = (message, title = "Notification") => {
+    setModal({
+      isOpen: true,
+      type: "alert",
+      title,
+      message,
+      inputValue: "",
+      onConfirm: null,
+    });
+  };
+
+  const showConfirm = (message, onConfirm, title = "Confirm Action") => {
+    setModal({
+      isOpen: true,
+      type: "confirm",
+      title,
+      message,
+      inputValue: "",
+      onConfirm,
+    });
+  };
+
+  const showPrompt = (
+    message,
+    defaultValue,
+    onConfirm,
+    title = "Input Required"
+  ) => {
+    setModal({
+      isOpen: true,
+      type: "prompt",
+      title,
+      message,
+      inputValue: defaultValue,
+      onConfirm,
+    });
+  };
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // --- 1. FETCH LIVE DATA ---
   const fetchBookings = async (status) => {
@@ -16,7 +69,7 @@ const WorkerBookings = () => {
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
-          credentials: "include", // Sends JWT Cookie
+          credentials: "include",
         }
       );
 
@@ -39,33 +92,10 @@ const WorkerBookings = () => {
     fetchBookings(activeTab);
   }, [activeTab]);
 
-  // --- 2. DECLINE ACTION ---
-  const handleDecline = async (bookingId) => {
+  // --- 2. ACTIONS ---
 
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/bookings/decline-booking`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ booking_id: bookingId }),
-        }
-      );
-
-      const result = await response.json();
-      if (result.status === "success") {
-        alert("Booking declined successfully.");
-        fetchBookings(activeTab); // Refresh the current tab to remove the declined job
-      } else {
-        alert(result.message);
-      }
-    } catch (err) {
-      alert("Failed to decline booking. Please try again.");
-    }
-  };
+  // Accept Job
   const handleAccept = async (bookingId) => {
-
     try {
       const response = await fetch(
         `http://localhost:5000/api/bookings/accept-booking`,
@@ -76,20 +106,132 @@ const WorkerBookings = () => {
           body: JSON.stringify({ booking_id: bookingId }),
         }
       );
-
       const result = await response.json();
-      if (result.status === "success") {
-        alert("Booking accepted successfully.");
-        fetchBookings(activeTab); // Refresh the current tab to remove the declined job
-      } else {
-        alert(result.message);
-      }
+      if (result.status === "success") fetchBookings(activeTab);
+      else showAlert(result.message, "Error");
     } catch (err) {
-      alert("Failed to accept booking. Please try again.");
+      showAlert("Failed to accept booking.", "Error");
     }
   };
 
-  // Helper function to format the start time from the "start to end" string
+  // Decline Job
+  const handleDecline = (bookingId) => {
+    showConfirm(
+      "Are you sure you want to decline this booking? The user will be fully refunded.",
+      async () => {
+        try {
+          const response = await fetch(
+            `http://localhost:5000/api/bookings/decline-booking`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ booking_id: bookingId }),
+            }
+          );
+          const result = await response.json();
+          if (result.status === "success") {
+            showAlert("Booking declined successfully.", "Success");
+            fetchBookings(activeTab);
+          } else {
+            showAlert(result.message, "Error");
+          }
+        } catch (err) {
+          showAlert("Failed to decline booking.", "Error");
+        }
+      },
+      "Decline Booking"
+    );
+  };
+
+  // Start Work
+  const handleStartWork = (bookingId) => {
+    showConfirm(
+      "Ready to start this job?",
+      async () => {
+        try {
+          const response = await fetch(
+            `http://localhost:5000/api/bookings/start-work`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ booking_id: bookingId }),
+            }
+          );
+          const result = await response.json();
+          if (result.status === "success") {
+            fetchBookings(activeTab);
+          } else {
+            showAlert(result.message, "Error");
+          }
+        } catch (err) {
+          showAlert("Failed to start work.", "Error");
+        }
+      },
+      "Start Work"
+    );
+  };
+
+  // Ask for Confirmation & Extra Charges
+  const handleRequestCompletion = (bookingId) => {
+    // 1. Show the prompt for extra charges
+    showPrompt(
+      "Enter any extra charges for materials or additional work (in ₹).\nLeave as 0 if there are no extra charges:",
+      "0",
+      (extraInput) => {
+        // 2. Validate input
+        const extraCharges = parseFloat(extraInput);
+        if (isNaN(extraCharges) || extraCharges < 0) {
+          showAlert(
+            "Invalid amount. Please enter a valid positive number.",
+            "Invalid Input"
+          );
+          return;
+        }
+
+        // 3. Chain into a confirmation popup
+        const confirmMessage =
+          extraCharges > 0
+            ? `Send completion request to customer with ₹${extraCharges} in extra charges?`
+            : `Send completion request to customer with NO extra charges?`;
+
+        showConfirm(
+          confirmMessage,
+          async () => {
+            // 4. Send to Backend
+            try {
+              const response = await fetch(
+                `http://localhost:5000/api/bookings/request-completion`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    booking_id: bookingId,
+                    extra_charges: extraCharges,
+                  }),
+                }
+              );
+
+              const result = await response.json();
+              if (result.status === "success") {
+                showAlert("Completion request sent to customer!", "Success");
+                fetchBookings(activeTab);
+              } else {
+                showAlert(result.message, "Error");
+              }
+            } catch (err) {
+              showAlert("Failed to request completion.", "Error");
+            }
+          },
+          "Confirm Request"
+        );
+      },
+      "Extra Charges"
+    );
+  };
+
   const formatStartTime = (timeString) => {
     if (!timeString) return "Time TBD";
     const startTimeStr = timeString.split(" to ")[0];
@@ -100,28 +242,34 @@ const WorkerBookings = () => {
     });
   };
 
+  const getTabLabel = (tab) => {
+    if (tab === "pending") return "New Requests";
+    if (tab === "active") return "Active Jobs";
+    return "Work History";
+  };
+
   return (
     <>
       <Usernav page="Bookings" />
       <div className="min-h-screen bg-transparent py-8 px-4 md:px-10">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto relative">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
             My Assignments
           </h1>
 
           {/* Tab Switcher */}
-          <div className="flex gap-6 border-b border-gray-200 mb-8">
-            {["pending", "history"].map((tab) => (
+          <div className="flex gap-6 border-b border-gray-200 mb-8 overflow-x-auto no-scrollbar">
+            {["pending", "active", "history"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-3 text-sm font-semibold capitalize transition-all ${
+                className={`pb-3 text-sm font-semibold whitespace-nowrap transition-all ${
                   activeTab === tab
                     ? "text-cyan-600 border-b-2 border-cyan-600"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                {tab === "history" ? "Work History" : "Upcoming Jobs"}
+                {getTabLabel(tab)}
               </button>
             ))}
           </div>
@@ -146,6 +294,10 @@ const WorkerBookings = () => {
                           className={`text-[10px] uppercase font-black px-2 py-1 rounded-full ${
                             job.status === "pending"
                               ? "bg-yellow-100 text-yellow-700"
+                              : job.status === "accepted"
+                              ? "bg-blue-100 text-blue-700"
+                              : job.status === "ongoing"
+                              ? "bg-purple-100 text-purple-700"
                               : job.status === "completed"
                               ? "bg-green-100 text-green-700"
                               : "bg-gray-100 text-gray-600"
@@ -191,10 +343,13 @@ const WorkerBookings = () => {
 
                     {/* Right: Actions */}
                     <div className="flex flex-row md:flex-col justify-end gap-3 border-t md:border-t-0 pt-4 md:pt-0 md:pl-6 border-gray-100 min-w-[140px]">
+                      {/* Actions for PENDING jobs */}
                       {job.status === "pending" && (
                         <>
-                          <button className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
-                          onClick={ () => handleAccept(job.booking_id)}>
+                          <button
+                            onClick={() => handleAccept(job.booking_id)}
+                            className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
+                          >
                             Accept Job
                           </button>
                           <button
@@ -206,8 +361,40 @@ const WorkerBookings = () => {
                         </>
                       )}
 
-                      {/* Add more buttons here later (e.g., "Mark as Done" for 'ongoing' jobs) */}
+                      {/* Actions for ACCEPTED jobs */}
+                      {job.status === "accepted" && (
+                        <button
+                          onClick={() => handleStartWork(job.booking_id)}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
+                        >
+                          Start Work
+                        </button>
+                      )}
 
+                      {/* Actions for ONGOING jobs */}
+                      {job.status === "ongoing" && (
+                        <button
+                          onClick={() =>
+                            handleRequestCompletion(job.booking_id)
+                          }
+                          className="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
+                        >
+                          Ask Confirmation
+                        </button>
+                      )}
+
+                      {/* Info for jobs waiting on User */}
+                      {job.status === "pending_completion" && (
+                        <div className="flex-1 flex items-center justify-end md:justify-center">
+                          <span className="text-xs font-bold text-orange-500 text-center">
+                            Waiting for user
+                            <br />
+                            to finalize & pay...
+                          </span>
+                        </div>
+                      )}
+
+                      {/* History Tab text */}
                       {activeTab === "history" && (
                         <div className="flex-1 flex items-center justify-end md:justify-center">
                           <span className="text-xs font-bold text-gray-400 uppercase">
@@ -230,6 +417,59 @@ const WorkerBookings = () => {
           </div>
         </div>
       </div>
+
+      {/* --- CUSTOM MODAL UI --- */}
+      {modal.isOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-black text-gray-900">{modal.title}</h3>
+            <p className="text-gray-600 text-sm whitespace-pre-wrap">
+              {modal.message}
+            </p>
+
+            {/* Prompt Input Field */}
+            {modal.type === "prompt" && (
+              <div className="relative mt-2">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  value={modal.inputValue}
+                  onChange={(e) =>
+                    setModal({ ...modal, inputValue: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-xl py-3 pl-8 pr-4 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 font-bold text-gray-900"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-3">
+              {/* Cancel Button (Hidden for standard alerts) */}
+              {modal.type !== "alert" && (
+                <button
+                  onClick={closeModal}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+              {/* Confirm/OK Button */}
+              <button
+                onClick={() => {
+                  const val = modal.inputValue;
+                  const cb = modal.onConfirm;
+                  closeModal(); // Close the current modal
+                  if (cb) cb(val); // Execute the passed function
+                }}
+                className="flex-1 py-2.5 rounded-xl font-bold text-white bg-cyan-500 hover:bg-cyan-600 transition-colors shadow-lg shadow-cyan-500/30"
+              >
+                {modal.type === "alert" ? "OK" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
