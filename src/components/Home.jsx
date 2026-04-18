@@ -53,10 +53,6 @@ const Home = () => {
         }
 
     }, [])
-<<<<<<< HEAD
-    
-    
-=======
 
     const handleSave = () => {
         
@@ -71,7 +67,6 @@ const Home = () => {
 
 
 
->>>>>>> 13202cec90e788af351750950077a8aa1f860923
     return (
         <>
             <Usernav />

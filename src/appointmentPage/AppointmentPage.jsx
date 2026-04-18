@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ScrollFadeIn from "../components/ScrollFadeIn";
 
-const BookingCard = ({ booking }) => {
+// 1. ADDED 'onFinalize' to the destructured props
+const BookingCard = ({ booking, onFinalize }) => {
   // Use sched_start from your DB schema
   const dateObj = new Date(booking.sched_start);
   const dateLabel = dateObj.toLocaleDateString("en-IN", {
@@ -141,31 +142,40 @@ const AppointmentPage = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchMyAppointments = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:5000/api/bookings/my-appointments",
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include", // Essential for JWT Cookie!
-          }
-        );
+  // 2. ADDED STATE FOR THE MODAL
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-        const data = await response.json();
-        if (data.status === "success") {
-          setBookings(data.data);
-        } else if (response.status === 401) {
-          navigate("/login");
+  // 3. ADDED REFRESH FUNCTION
+  const fetchMyAppointments = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/bookings/my-appointments",
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include", // Essential for JWT Cookie!
         }
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      );
 
+      const data = await response.json();
+      if (data.status === "success") {
+        setBookings(data.data);
+      } else if (response.status === 401) {
+        navigate("/login");
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchMyAppointments();
   }, [navigate]);
 
@@ -173,7 +183,61 @@ const AppointmentPage = () => {
     filter === "All" ? true : b.stat.toLowerCase() === filter.toLowerCase()
   );
 
-  const tabs = ["All", "Pending", "Accepted", "Completed", "Declined","Cancelled"];
+  const tabs = [
+    "All",
+    "Pending",
+    "Accepted",
+    "Completed",
+    "Declined",
+    "Cancelled",
+  ];
+
+  // 4. ADDED MODAL HANDLERS
+  const handleOpenModal = (booking) => {
+    setSelectedBooking(booking);
+    setRating(5); // Reset default to 5 stars
+    setReviewText(""); // Reset text
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedBooking(null);
+  };
+
+  const handleSubmitFinalize = async () => {
+    if (!selectedBooking) return;
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/bookings/approve-completion`, // Adjust endpoint to match your backend
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            booking_id: selectedBooking.booking_id,
+            rating: rating,
+            review: reviewText,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      if (result.status === "success") {
+        alert("Payment successful and review submitted!");
+        handleCloseModal();
+        fetchMyAppointments(); // Refresh the list to show as 'Completed'
+      } else {
+        alert(result.message || "Failed to finalize booking");
+      }
+    } catch (err) {
+      alert("An error occurred while finalizing.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading)
     return (
@@ -183,7 +247,7 @@ const AppointmentPage = () => {
     );
 
   return (
-    <div className="min-h-screen bg-transparent pt-24 pb-16">
+    <div className="min-h-screen bg-transparent pt-24 pb-16 relative">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">
           My Appointments
@@ -211,7 +275,11 @@ const AppointmentPage = () => {
         <div className="flex flex-col gap-5">
           {filteredData.length > 0 ? (
             filteredData.map((booking) => (
-              <BookingCard key={booking.booking_id} booking={booking} />
+              <BookingCard
+                key={booking.booking_id}
+                booking={booking}
+                onFinalize={handleOpenModal} // 5. PASSED THE PROP HERE
+              />
             ))
           ) : (
             <div className="py-20 flex flex-col items-center justify-center">
@@ -222,12 +290,85 @@ const AppointmentPage = () => {
           )}
         </div>
       </div>
+
+      {/* 6. ADDED THE MODAL UI */}
+      {isModalOpen && selectedBooking && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl p-8 shadow-2xl border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+              Finalize Payment
+            </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Review and pay for {selectedBooking.service_name}
+            </p>
+
+            <div className="space-y-6">
+              {/* Total Payment Breakdown */}
+              <div className="bg-cyan-50 dark:bg-cyan-900/20 p-5 rounded-2xl border border-cyan-100 dark:border-cyan-800 flex justify-between items-center">
+                <span className="text-sm font-bold text-cyan-800 dark:text-cyan-300">
+                  Final Amount
+                </span>
+                <span className="text-2xl font-black text-cyan-600">
+                  ₹{selectedBooking.price}
+                </span>
+              </div>
+
+              {/* Rating Section */}
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 block mb-3 text-center tracking-widest">
+                  Rate the Worker
+                </label>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className={`text-3xl transition-transform active:scale-90 ${
+                        rating >= star ? "grayscale-0" : "grayscale opacity-30"
+                      }`}
+                    >
+                      ⭐
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Review Text Area */}
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 block mb-2 tracking-widest">
+                  Leave a Review
+                </label>
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="How was the service?"
+                  rows="3"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:border-cyan-500 focus:outline-none dark:text-white resize-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleCloseModal}
+                  className="flex-1 py-3 font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitFinalize}
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 bg-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 hover:bg-cyan-600 disabled:opacity-50 transition-all"
+                >
+                  {isSubmitting ? "Processing..." : "Pay Now"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default AppointmentPage;
-
-
-
-
