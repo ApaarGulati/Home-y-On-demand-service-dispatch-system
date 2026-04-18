@@ -10,6 +10,7 @@ from myapp.models.worker import Worker
 from myapp.models.app_user import AppUser
 from myapp.models.account import Account
 from myapp.models.address import Address
+from myapp.middleware.auth_middleware import token_required, role_required
 
 services_bp = Blueprint('services', __name__)
 
@@ -113,3 +114,57 @@ def get_services(current_user):
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+from myapp.models.review import Review 
+from myapp.models.booking import Booking  
+
+@services_bp.route('/worker-reviews', methods=['GET'])
+@token_required
+@role_required(['worker'])
+def get_worker_reviews(current_user):
+    try:
+        worker_id = current_user.get('user_id') # Ensure this is how you extract the worker ID
+
+        # 1. Join all necessary tables to get the flat data structure
+        results = db.session.query(
+            Booking.booking_id,
+            Review.review_id,
+            AppUser.user_id,
+            Review.rating_value,
+            Review.comment,
+            Review.created_at,
+            Service.service_name,
+            Account.first_name,
+            Account.last_name
+        ).join(Booking, Review.booking_id == Booking.booking_id) \
+         .join(Service, Booking.service_id == Service.service_id) \
+         .join(AppUser, Booking.user_id == AppUser.user_id) \
+         .join(Account, AppUser.account_id == Account.account_id) \
+         .filter(Booking.worker_id == worker_id) \
+         .order_by(Review.created_at.desc()) \
+         .all()
+
+        # 2. Format the output exactly as requested
+        reviews_list = []
+        for row in results:
+            # Safely format the customer name
+            name_parts = [row.first_name, row.last_name]
+            customer_name = " ".join([part for part in name_parts if part])
+
+            reviews_list.append({
+                "id": row.review_id,
+                "booking_id": row.booking_id,
+                "profile_pic": f"https://i.pravatar.cc/300?u={row.user_id}",
+                "customerName": customer_name,
+                "serviceName": row.service_name,
+                "rating": float(row.rating_value),
+                "comment": row.comment or "No comment provided.",
+                "date": row.created_at
+            })
+
+        return jsonify({"status": "success", "data": reviews_list}), 200
+
+    except Exception as e:
+        print(f"Error fetching reviews: {e}")
+        return jsonify({"status": "error", "message": "Failed to load reviews"}), 500
