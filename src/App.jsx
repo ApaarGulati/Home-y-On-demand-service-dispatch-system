@@ -17,6 +17,8 @@ import OrderConfirmed from "./components/OrderConfirmed";
 import Home from "./components/Home";
 import Usernav from "./components/Usernav";
 import axios from "axios";
+import WorkerProfilePage from "./components/WorkerProfilePage";
+import { User } from "lucide-react";
 
 
 // 1. Set the exact base URL of your Flask server
@@ -50,7 +52,7 @@ function App() {
           path="/services"
           element={
             <>
-              <Usernav page="Book now"/>
+              <Usernav page="Book now" />
               <ServicePage />
             </>
           }
@@ -70,63 +72,84 @@ function App() {
           path="/profile"
           element={
             <>
-              <Usernav page="Profile"/>
+              <Usernav page="Profile" />
               <ProfilePage />
             </>
           }
         />
 
+        <Route 
+          path="/worker-profile" 
+          element={
+            <>
+            <Usernav page="Profile"/>
+            <WorkerProfilePage /> 
+            </>}
+          />
+
         <Route
           path="/login"
           element={
             <>
-              <Login/>
+              <Login />
             </>
           }
         />
 
-        <Route path="/createaccount" element={
-        <>
-          <CreateAccount/>
-        </>
-        }/>
+        <Route
+          path="/createaccount"
+          element={
+            <>
+              <CreateAccount />
+            </>
+          }
+        />
 
-        <Route path="/checkout" element={
-          <>
-            <Checkout/>
-          </>
-        }/>
+        <Route
+          path="/checkout"
+          element={
+            <>
+              <Checkout />
+            </>
+          }
+        />
 
-        <Route path="/orderconfirmed" element={
-          <>
-            <OrderConfirmed/>
-          </>
-        }/>
+        <Route
+          path="/orderconfirmed"
+          element={
+            <>
+              <OrderConfirmed />
+            </>
+          }
+        />
 
-        <Route path="/home" element={
-          <>
-            <Home/>
-          </>
-        }/>
+        <Route
+          path="/home"
+          element={
+            <>
+              <Home />
+            </>
+          }
+        />
 
-        <Route path="/workerappointments" element={
-          <>
-            
-            <AppointmentPageworker/>
-          </>
-        }/>
+        <Route
+          path="/workerappointments"
+          element={
+            <>
+              <AppointmentPageworker />
+            </>
+          }
+        />
 
-        <Route path="/Reviews" element={
-          <>
-            
-            <Review/>
-          </>
-        }/>
-
-
+        <Route
+          path="/Reviews"
+          element={
+            <>
+              <Review />
+            </>
+          }
+        />
       </Routes>
-
-      
     </BrowserRouter>
   );
 }

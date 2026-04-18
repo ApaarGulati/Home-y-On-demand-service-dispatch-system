@@ -79,8 +79,8 @@ const Usernav = (props) => {
                   } else {
                     if (user_role ==="app_user"){
                       navigate("/profile");
-                    }else if (link === "worker"){
-                      navigate("/worker_profile")
+                    }else if (user_role === "worker"){
+                      navigate("/worker-profile")
                     }
 
                   }

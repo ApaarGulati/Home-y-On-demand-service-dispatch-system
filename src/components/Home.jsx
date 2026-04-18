@@ -33,8 +33,6 @@ const Home = () => {
     }, [])
     
     
-
-
     return (
         <>
             <Usernav />

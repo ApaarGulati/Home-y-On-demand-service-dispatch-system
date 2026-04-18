@@ -7,7 +7,7 @@ import {
   Mail,
   User as UserIcon,
   Camera,
-  Briefcase
+  Briefcase,
 } from "lucide-react";
 import ScrollFadeIn from "../components/ScrollFadeIn";
 
@@ -23,7 +23,7 @@ const WorkerProfilePage = () => {
     full_name: "",
     email: "",
     phone: "",
-    address: "",
+    profile_pic: ""
   });
 
   // State for the form while editing
@@ -33,12 +33,14 @@ const WorkerProfilePage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // You will need a specific backend route for this that also joins the Services table
-        const response = await fetch("http://localhost:5000/api/auth/worker-profile", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include", 
-        });
+        const response = await fetch(
+          "http://localhost:5000/api/auth/workerprofile",
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
 
         const data = await response.json();
         if (data.status === "success") {
@@ -47,12 +49,12 @@ const WorkerProfilePage = () => {
             full_name: profile.name || "",
             email: profile.email || "",
             phone: profile.phone || "",
-            address: profile.address || "",
+            profile_pic: profile.profile_pic || ""
           };
           setUserData(initialData);
           setFormData(initialData);
-          setBalance(profile.current_balance || 0);
-          setServices(profile.services || []); // Set the fetched services array
+          setBalance(profile.current_balance);
+          setServices(profile.services || []); // Set the detailed services array
         } else {
           navigate("/login");
         }
@@ -69,7 +71,7 @@ const WorkerProfilePage = () => {
   const handleSave = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/auth/worker-profile",
+        "http://localhost:5000/api/auth/update-worker-profile",
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -135,7 +137,7 @@ const WorkerProfilePage = () => {
           name={name}
           value={formData[name]}
           onChange={handleInputChange}
-          disabled={!isEditing || name === "email"} 
+          disabled={!isEditing || name === "email"}
           className={`p-3 rounded-xl border transition-all ${
             isEditing && name !== "email"
               ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:border-cyan-500 outline-none dark:text-white"
@@ -222,7 +224,7 @@ const WorkerProfilePage = () => {
             <div className="w-full md:w-1/3 bg-gray-50 dark:bg-gray-800/50 p-8 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800">
               <div className="relative">
                 <img
-                  src={`https://ui-avatars.com/api/?name=${userData.full_name}&background=06b6d4&color=fff&size=150`}
+                  src={userData.profile_pic}
                   alt="Profile"
                   className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-gray-900 shadow-lg"
                 />
@@ -248,39 +250,34 @@ const WorkerProfilePage = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <InputField label="Full Name" name="full_name" />
-                  <InputField label="Email Address" name="email" type="email" />
                   <InputField label="Phone Number" name="phone" type="tel" />
                 </div>
               </section>
 
-              <section>
-                <h3 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <MapPin size={16} /> Location Details
-                </h3>
-                <div className="flex flex-col gap-5">
-                  <InputField
-                    label="Registered Address"
-                    name="address"
-                    isTextArea={true}
-                  />
-                </div>
-              </section>
 
-              {/* NEW: Services Provided Section */}
+              {/* MODIFIED: Services Provided Section */}
               <section className="border-t border-gray-100 dark:border-gray-800 pt-6">
                 <h3 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <Briefcase size={16} /> Services Provided
                 </h3>
-                
+
                 {services.length > 0 ? (
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {services.map((service, index) => (
-                      <div 
-                        key={index} 
-                        className="bg-cyan-50 border border-cyan-100 text-cyan-700 dark:bg-cyan-900/20 dark:border-cyan-800/50 dark:text-cyan-300 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2"
+                      <div
+                        key={index}
+                        className="bg-cyan-50 border border-cyan-100 text-cyan-700 dark:bg-cyan-900/20 dark:border-cyan-800/50 dark:text-cyan-300 px-4 py-3 rounded-xl flex flex-col gap-1"
                       >
-                        <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
-                        {service.name || service}
+                        <div className="flex items-center gap-2 font-bold text-sm">
+                          <span className="w-2 h-2 rounded-full bg-cyan-500 shrink-0"></span>
+                          {service.name || service}
+                        </div>
+                        {/* Render Price & Type if available */}
+                        {service.price !== undefined && (
+                          <span className="text-[11px] font-black uppercase opacity-70 ml-4 tracking-widest">
+                            ₹{service.price} / {service.type?.replace("_", " ")}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -292,7 +289,6 @@ const WorkerProfilePage = () => {
                   </div>
                 )}
               </section>
-
             </div>
           </div>
         </ScrollFadeIn>
