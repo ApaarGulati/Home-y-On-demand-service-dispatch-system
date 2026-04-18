@@ -477,16 +477,19 @@ def request_completion(current_user):
 
 
 from myapp.models.wallet import Wallet # Make sure you have this model created!
+from myapp.models.review import Review
 
 @bookings_bp.route('/approve-completion', methods=['POST'])
 @token_required
-@role_required(['app_user']) # ONLY the customer can do this!
+@role_required(['app_user']) 
 def approve_completion(current_user):
     data = request.get_json(silent=True) or {}
     booking_id = data.get('booking_id')
-
-    if not booking_id:
-        return jsonify({"status": "error", "message": "booking_id is required"}), 400
+    rating = data.get('rating')
+    review_text = data.get('review') # Renamed variable to avoid conflict with the model
+    
+    if not booking_id or not rating or not review_text:
+        return jsonify({"status": "error", "message": "booking_id, rating, and review are required"}), 400
 
     try:
         # 1. Lock the booking and verify the CUSTOMER owns it
@@ -498,7 +501,7 @@ def approve_completion(current_user):
         if not booking:
             return jsonify({"status": "error", "message": "Booking not found or unauthorized"}), 404
         
-        # 2. State Machine Logic: Must be waiting for payment approval
+        # 2. State Machine Logic
         if booking.stat != 'payment_pending':
             db.session.rollback()
             return jsonify({
@@ -512,24 +515,21 @@ def approve_completion(current_user):
             db.session.rollback()
             return jsonify({"status": "error", "message": "Financial record missing"}), 500
 
-        # 4. Fetch the Wallets (We lock these too to prevent race conditions on balances!)
+        # 4. Fetch the Wallets 
         customer = AppUser.query.get(booking.user_id)
         worker = Worker.query.get(booking.worker_id)
 
         customer_wallet = Wallet.query.with_for_update().filter_by(account_id=customer.account_id).first()
         worker_wallet = Wallet.query.with_for_update().filter_by(account_id=worker.account_id).first()
 
-
         if not customer_wallet or not worker_wallet:
             db.session.rollback()
             return jsonify({"status": "error", "message": "Wallet accounts missing. Cannot process payment."}), 500
 
-        # 5. The Math (Deposit Model)
-        # We assume the base_amount (deposit) was already taken at booking time.
-        # Now we only need to deduct the extra charges from the customer.
+        # 5. The Math 
         extra_owed = float(payment.total_amount) - float(payment.base_amount)
 
-        # 6. DBMS Constraint Check: Can the customer afford the extra charges?
+        # 6. DBMS Constraint Check
         if float(customer_wallet.current_balance) < extra_owed:
             db.session.rollback()
             return jsonify({
@@ -537,7 +537,6 @@ def approve_completion(current_user):
                 "message": f"Insufficient funds. You need ₹{extra_owed} more to approve this bill."
             }), 402
         
-
         COMMISSION_RATE = 0.15 
         total_payment = float(payment.total_amount)
         
@@ -545,31 +544,33 @@ def approve_completion(current_user):
         worker_cut = total_payment - platform_cut
 
         # 7. EXECUTE THE TRANSFER
-        # A. Take the extra money from the customer (they already paid the deposit)
         customer_wallet.current_balance = float(customer_wallet.current_balance) - extra_owed
-        
-        # B. Give the WORKER their 85% share
         worker_wallet.current_balance = float(worker_wallet.current_balance) + worker_cut
         
-        # C. Give the PLATFORM its 15% share!
-        # You should have a master 'Admin' wallet in your database to hold platform profits.
-        # Assuming you have an Admin account with ID 'ADMIN-1':
         admin_wallet = Wallet.query.with_for_update().filter_by(account_id='ADMIN-1').first()
         if admin_wallet:
             admin_wallet.current_balance = float(admin_wallet.current_balance) + platform_cut
         
-        # D. Update the Receipt
         payment.escrow_status = 'RELEASED'
-        
-        # E. Finalize the Booking
         booking.stat = 'completed'
+
+        # --- NEW: INSERT THE REVIEW ---
+        new_review = Review(
+            booking_id=booking_id,
+            rating_value=float(rating),
+            comment=review_text
+        )
+        db.session.add(new_review)
+        
+        # Optional: If your Booking model has a 'has_review' boolean column, update it here.
+        # booking.has_review = True
 
         # 8. COMMIT EVERYTHING AT ONCE
         db.session.commit()
         
         return jsonify({
             "status": "success", 
-            "message": "Payment approved! The worker has been paid and the job is complete.",
+            "message": "Payment approved! The worker has been paid and the review submitted.",
             "receipt": {
                 "total_paid": float(payment.total_amount),
                 "escrow_status": payment.escrow_status
@@ -584,9 +585,6 @@ def approve_completion(current_user):
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
-    
-
-
 
 
 @bookings_bp.route('/update-worker-services', methods=['POST'])
