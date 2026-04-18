@@ -14,6 +14,7 @@ import worker from "../assets/workerworking.png"
 import { useNavigate } from 'react-router-dom'
 
 
+
 const Landing = () => {
 
     var wordarr = ["Search for massages", "Search for Servicing", "Search for Facials"];
