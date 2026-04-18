@@ -91,7 +91,7 @@ const Review = () => {
                                 </div>
 
                                 {/* Service Tag */}
-                                <div className="inline-block bg-green-200 text-cyan-700 text-[10px] font-black uppercase px-2 py-1 rounded-md mb-3">
+                                <div className="inline-block bg-transparent text-cyan-700 text-[10px] font-black uppercase px-2 py-1 rounded-md mb-3">
                                     {review.serviceName}
                                 </div>
 
