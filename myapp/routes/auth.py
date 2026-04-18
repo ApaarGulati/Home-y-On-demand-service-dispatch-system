@@ -151,6 +151,7 @@ def login_account():
             # 2. Build the JSON response (Notice we do NOT put the token in here anymore!)
             response = make_response(jsonify({
                 "status": "success",
+                "role": account.role_type ,
                 "message": "Login successful."
             }))
 
@@ -172,7 +173,6 @@ def login_account():
 
 
 @auth_bp.route('/logout', methods=['POST'])
-@token_required
 def logout_account():
     # 1. Create a successful JSON response
     response = make_response(jsonify({
