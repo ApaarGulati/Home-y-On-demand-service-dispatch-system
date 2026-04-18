@@ -6,7 +6,7 @@ import search from "../assets/search.svg";
 import Carousel from './Carousel';
 import Footer from './Footer';
 import { useNavigate } from 'react-router-dom';
-import { Check ,Save, Loader2} from 'lucide-react';
+import { Check, Save, Loader2 } from 'lucide-react';
 
 const Home = () => {
 
@@ -16,7 +16,58 @@ const Home = () => {
     const [isUser, setisUser] = useState(true);
 
 
-    
+    const [modal, setModal] = useState({
+        isOpen: false,
+        type: "alert", // 'alert', 'confirm', or 'prompt'
+        title: "",
+        message: "",
+        inputValue: "0",
+        onConfirm: null,
+    });
+
+    // Modal Helper Functions
+    const showAlert = (message, title = "Notification") => {
+        setModal({
+            isOpen: true,
+            type: "alert",
+            title,
+            message,
+            inputValue: "",
+            onConfirm: null,
+        });
+    };
+
+    const showConfirm = (message, onConfirm, title = "Confirm Action") => {
+        setModal({
+            isOpen: true,
+            type: "confirm",
+            title,
+            message,
+            inputValue: "",
+            onConfirm,
+        });
+    };
+
+    const showPrompt = (
+        message,
+        defaultValue,
+        onConfirm,
+        title = "Input Required"
+    ) => {
+        setModal({
+            isOpen: true,
+            type: "prompt",
+            title,
+            message,
+            inputValue: defaultValue,
+            onConfirm,
+        });
+    };
+
+    const closeModal = () => {
+        setModal((prev) => ({ ...prev, isOpen: false }));
+    };
+
 
     const [skills, setSkills] = useState([
         { id: 1, name: "General Plumbing", completed: false },
@@ -58,12 +109,12 @@ const Home = () => {
     }, [])
 
     const handleSave = () => {
-        
+
         setIsSaving(true);
         // Simulate API call
         setTimeout(() => {
             setIsSaving(false);
-            alert("Skills updated successfully!");
+            showAlert("Skills added succesfully")
         }, 1500);
     };
 
@@ -173,6 +224,9 @@ const Home = () => {
                             Fixed skill set based on your primary category
                         </p>
                     </div>
+
+                    
+
                 </div>
 
             </ScrollFadeIn>}
