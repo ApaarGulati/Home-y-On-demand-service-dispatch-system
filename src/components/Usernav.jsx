@@ -93,7 +93,7 @@ const Usernav = (props) => {
 
           {/* Action Button & Hamburger */}
           <div className="flex items-center gap-4">
-          {user_role.length==0?<button className="hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer" onClick={handleLogout}>Logout</button>:<button className='hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer' onClick={()=>navigate("/login")}>Login</button>}
+          {!(user_role==null||user_role.isEmpty())?<button className="hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer" onClick={handleLogout}>Logout</button>:<button className='hidden md:block bg-cyan-500 px-6 py-2 text-white rounded-full font-bold text-[12px] hover:bg-cyan-700 transition-colors cursor-pointer' onClick={()=>navigate("/login")}>Login</button>}
             {/* Mobile Toggle */}
             <button
               className="md:hidden dark:text-white text-black"
@@ -127,12 +127,7 @@ const Usernav = (props) => {
                 {link}
               </div>
             ))}
-            <button
-              className="bg-cyan-500 text-white py-2 rounded-full font-bold text-sm"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
+            {!(user_role==null||user_role.isEmpty())?<button className="bg-cyan-500 text-white py-2 rounded-full font-bold text-sm" onClick={handleLogout}>Logout</button>:<button className="bg-cyan-500 text-white py-2 rounded-full font-bold text-sm" onClick={()=>navigate("/login")}>Login</button>}
           </div>
         </div>
       </nav>
