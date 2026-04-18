@@ -76,7 +76,18 @@ const Login = () => {
 
     if (translation.status === "success") {
       // alert(translation.message);
-      navigate("/");
+      localStorage.setItem("userRole", translation.role);
+      
+
+      // Trigger a custom event to wake up the Navbar
+      window.dispatchEvent(new Event("authChange"));
+
+      navigate("/home");
+
+
+
+
+
     }
 
   };

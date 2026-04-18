@@ -10,34 +10,31 @@ const Usernav = (props) => {
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(props.page);
     const navigate = useNavigate();
-    var user_role="app_user"
-
+    const [user_role, setRole] = useState(localStorage.getItem("userRole"));
 
     useEffect(() => {
-      const identifyuser= async () => {
-        const token = await document.cookie("access_token");
-        if(!token) return null;
-        const decoded=jwtDecode(token);
-        user_role=decoded.role;
-        return;
-      }
-      identifyuser()
-      
-      
-    }, [])
-    
+      const updateNav = () => {
+        setRole(localStorage.getItem("userRole"));
+      };
+
+      // Listen for the custom event we fired in Login.jsx
+      window.addEventListener("authChange", updateNav);
+
+      return () => window.removeEventListener("authChange", updateNav);
+    }, []);
 
     const navLinks = ['Home', (user_role=="app_user"?"Book now":"Reviews"), 'Bookings', 'Profile'];
-
+    
     const handleLogout = async () => {
       try {
         await fetch("http://localhost:5000/api/auth/logout", {
           method: "POST",
           credentials: "include", // Essential to tell the browser which cookie to kill
         });
-
+        localStorage.clear();
         // Now that the cookie is gone, we can safely redirect
         navigate("/login");
+        
       } catch (err) {
         console.error("Logout failed", err);
       }
@@ -67,18 +64,17 @@ const Usernav = (props) => {
                   setActiveTab(link);
                   if (link === "Home") {
                     navigate("/home");
-                  } else if (link === "Book now"||link==="Reviews") {
-                    if(user_role==="app_user"){
+                  } else if (link === "Book now" || link === "Reviews") {
+                    if (user_role === "app_user") {
                       navigate("/services");
-                    }else{
-                      navigate("/Reviews")
+                    } else {
+                      navigate("/Reviews");
                     }
-          
                   } else if (link === "Bookings") {
-                    if(user_role==="app_user"){
+                    if (user_role === "app_user") {
                       navigate("/appointments");
-                    }else{
-                      navigate("/workerappointments")
+                    } else {
+                      navigate("/workerappointments");
                     }
                   } else {
                     navigate("/profile");
@@ -137,7 +133,10 @@ const Usernav = (props) => {
                 {link}
               </div>
             ))}
-            <button className="bg-cyan-500 text-white py-2 rounded-full font-bold text-sm">
+            <button
+              className="bg-cyan-500 text-white py-2 rounded-full font-bold text-sm"
+              onClick={handleLogout}
+            >
               Logout
             </button>
           </div>
