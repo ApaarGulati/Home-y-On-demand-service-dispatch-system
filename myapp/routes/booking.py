@@ -289,8 +289,7 @@ def get_worker_bookings(current_user):
 
         # 3. Apply the Status Filter
         if status_filter == 'history':
-            # Group completed and declined together for the history tab
-            query = query.filter(Booking.stat.in_(['completed', 'declined']))
+
             query = query.order_by(Booking.sched_start.desc()) # Newest history first
         else:
             query = query.filter(Booking.stat == status_filter)
