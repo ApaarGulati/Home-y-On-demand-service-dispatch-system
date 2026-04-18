@@ -60,7 +60,7 @@ const WorkerBookings = () => {
       <Usernav page="Bookings" />
       <div className="min-h-screen bg-transparent py-8 px-4 md:px-10">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">My Assignments</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">My Bookings</h1>
 
           {/* Tab Switcher */}
           <div className="flex gap-6 border-b border-gray-200 mb-8">
@@ -120,11 +120,11 @@ const WorkerBookings = () => {
                     {/* Right: Actions */}
                     <div className="flex flex-row md:flex-col justify-end gap-2 border-t md:border-t-0 pt-4 md:pt-0 md:pl-6 border-gray-100">
                       <button className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-bold text-sm transition-colors">
-                        View Details
+                        Accept
                       </button>
                       {job.status === 'pending' && (
                         <button className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-lg font-bold text-sm transition-colors">
-                          Call Customer
+                          Decline
                         </button>
                       )}
                     </div>

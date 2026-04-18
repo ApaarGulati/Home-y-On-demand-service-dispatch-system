@@ -76,16 +76,7 @@ const Login = () => {
 
     if (translation.status === "success") {
       // alert(translation.message);
-
-
-
-
-      navigate("/services");
-
-
-
-
-
+      navigate("/");
     }
 
   };
