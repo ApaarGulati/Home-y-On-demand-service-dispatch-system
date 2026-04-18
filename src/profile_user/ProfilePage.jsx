@@ -16,6 +16,11 @@ const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [balance, setBalance] = useState(0);
 
+  // --- ADD FUNDS MODAL STATE ---
+  const [showFundsModal, setShowFundsModal] = useState(false);
+  const [fundAmount, setFundAmount] = useState("");
+  const [isProcessingFunds, setIsProcessingFunds] = useState(false);
+
   // State for the actual saved data
   const [userData, setUserData] = useState({
     full_name: "",
@@ -96,6 +101,41 @@ const ProfilePage = () => {
     }
   };
 
+  // --- 3. ADD FUNDS API HANDLER ---
+  const submitAddFunds = async () => {
+    const amount = parseFloat(fundAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid positive amount.");
+      return;
+    }
+
+    setIsProcessingFunds(true);
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/wallet/add-funds",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ amount }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.status === "success") {
+        setBalance(data.new_balance); // Instantly updates the big number on screen!
+        setShowFundsModal(false); // Closes the popup
+        setFundAmount(""); // Resets the input field
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      alert("Failed to process transaction.");
+    } finally {
+      setIsProcessingFunds(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -156,7 +196,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-transparent transition-colors duration-300 pt-24 pb-16">
+    <div className="min-h-screen bg-transparent transition-colors duration-300 pt-24 pb-16 relative">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <ScrollFadeIn>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
@@ -207,11 +247,15 @@ const ProfilePage = () => {
                   Wallet Balance
                 </p>
                 <h3 className="text-3xl font-black tracking-tighter">
-                  ₹{balance}
+                  ₹{Number(balance).toFixed(2)}
                 </h3>
               </div>
             </div>
-            <button className="bg-white text-cyan-700 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-cyan-50 transition-colors shadow-md">
+            {/* Added onClick trigger here */}
+            <button
+              onClick={() => setShowFundsModal(true)}
+              className="bg-white text-cyan-700 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-cyan-50 transition-colors shadow-md"
+            >
               Add Funds
             </button>
           </div>
@@ -259,17 +303,61 @@ const ProfilePage = () => {
                   <MapPin size={16} /> Location Details
                 </h3>
                 <div className="flex flex-col gap-5">
-                  <InputField
-                    label=""
-                    name="address"
-                    isTextArea={true}
-                  />
+                  <InputField label="" name="address" isTextArea={true} />
                 </div>
               </section>
             </div>
           </div>
         </ScrollFadeIn>
       </div>
+
+      {/* --- ADD FUNDS MODAL UI --- */}
+      {showFundsModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-sm p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200 border border-gray-100 dark:border-gray-800">
+            <div>
+              <h3 className="text-xl font-black text-gray-900 dark:text-white">
+                Top Up Wallet
+              </h3>
+              <p className="text-gray-500 text-sm mt-1">
+                Enter the amount you wish to add.
+              </p>
+            </div>
+
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-500 font-black text-xl">
+                ₹
+              </span>
+              <input
+                type="number"
+                value={fundAmount}
+                onChange={(e) => setFundAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-10 pr-4 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 font-black text-2xl text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowFundsModal(false);
+                  setFundAmount("");
+                }}
+                className="flex-1 py-3 rounded-xl font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitAddFunds}
+                disabled={isProcessingFunds || !fundAmount}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 transition-colors shadow-lg shadow-cyan-500/30"
+              >
+                {isProcessingFunds ? "Processing..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
