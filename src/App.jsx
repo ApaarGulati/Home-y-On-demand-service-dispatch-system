@@ -5,6 +5,8 @@ import Landing from "./components/Landing";
 import Navbar from "./components/Navbar";
 import ScrollFadeIn from "./components/ScrollFadeIn";
 import ServicePage from "./servicePage/ServicePage";
+import AppointmentPageworker from "./appointmentPage/AppointmentPageworker";
+import Review from "./components/Review";
 // Make sure this path matches wherever you saved the new file!
 import AppointmentPage from "./appointmentPage/AppointmentPage";
 import ProfilePage from "./profile_user/ProfilePage";
@@ -15,6 +17,7 @@ import OrderConfirmed from "./components/OrderConfirmed";
 import Home from "./components/Home";
 import Usernav from "./components/Usernav";
 import axios from "axios";
+
 
 // 1. Set the exact base URL of your Flask server
 axios.defaults.baseURL = "http://localhost:5000";
@@ -105,6 +108,21 @@ function App() {
             <Home/>
           </>
         }/>
+
+        <Route path="/workerappointments" element={
+          <>
+            
+            <AppointmentPageworker/>
+          </>
+        }/>
+
+        <Route path="/Reviews" element={
+          <>
+            
+            <Review/>
+          </>
+        }/>
+
 
       </Routes>
 

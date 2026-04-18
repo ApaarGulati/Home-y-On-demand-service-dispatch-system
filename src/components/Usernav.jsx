@@ -3,13 +3,31 @@ import { Menu, X } from 'lucide-react';
 import logo from "../assets/logo3.png";
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { useEffect } from 'react';
+import { jwtDecode } from "jwt-decode";
 
 const Usernav = (props) => {
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(props.page);
     const navigate = useNavigate();
+    var user_role="app_user"
 
-    const navLinks = ['Home', 'Book now', 'Bookings', 'Profile'];
+
+    useEffect(() => {
+      const identifyuser= async () => {
+        const token = await document.cookie("access_token");
+        if(!token) return null;
+        const decoded=jwtDecode(token);
+        user_role=decoded.role;
+        return;
+      }
+      identifyuser()
+      
+      
+    }, [])
+    
+
+    const navLinks = ['Home', (user_role=="app_user"?"Book now":"Reviews"), 'Bookings', 'Profile'];
 
     const handleLogout = async () => {
       try {
@@ -49,10 +67,19 @@ const Usernav = (props) => {
                   setActiveTab(link);
                   if (link === "Home") {
                     navigate("/home");
-                  } else if (link === "Book now") {
-                    navigate("/services");
+                  } else if (link === "Book now"||link==="Reviews") {
+                    if(user_role==="app_user"){
+                      navigate("/services");
+                    }else{
+                      navigate("/Reviews")
+                    }
+          
                   } else if (link === "Bookings") {
-                    navigate("/appointments");
+                    if(user_role==="app_user"){
+                      navigate("/appointments");
+                    }else{
+                      navigate("/workerappointments")
+                    }
                   } else {
                     navigate("/profile");
                   }
