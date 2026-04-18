@@ -289,11 +289,18 @@ def get_worker_bookings(current_user):
 
         # 3. Apply the Status Filter
         if status_filter == 'history':
-
             query = query.order_by(Booking.sched_start.desc()) # Newest history first
+        elif status_filter == 'active':
+            query = query.filter(Booking.stat.in_(['accepted', 'ongoing',]))
+            query = query.order_by(Booking.sched_start.desc()) # Newest history first
+            
         else:
             query = query.filter(Booking.stat == status_filter)
             query = query.order_by(Booking.sched_start.asc())  # Closest upcoming first
+
+
+
+
 
         results = query.all()
 
