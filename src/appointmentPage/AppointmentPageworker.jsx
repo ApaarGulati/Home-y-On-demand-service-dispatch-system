@@ -41,12 +41,6 @@ const WorkerBookings = () => {
 
   // --- 2. DECLINE ACTION ---
   const handleDecline = async (bookingId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to decline this booking? The user will be fully refunded."
-      )
-    )
-      return;
 
     try {
       const response = await fetch(
@@ -70,15 +64,11 @@ const WorkerBookings = () => {
       alert("Failed to decline booking. Please try again.");
     }
   };
-  const handleAccept =async ()=>{
-    if (
-      !window.confirm(
-        "Are you sure you want to decline this booking? The user will be fully refunded."
-      )
-    ) return;
+  const handleAccept = async (bookingId) => {
 
     try {
-      const response = await fetch( `http://localhost:5000/api/bookings/accept-booking`,
+      const response = await fetch(
+        `http://localhost:5000/api/bookings/accept-booking`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -97,7 +87,7 @@ const WorkerBookings = () => {
     } catch (err) {
       alert("Failed to accept booking. Please try again.");
     }
-  }
+  };
 
   // Helper function to format the start time from the "start to end" string
   const formatStartTime = (timeString) => {
@@ -204,7 +194,7 @@ const WorkerBookings = () => {
                       {job.status === "pending" && (
                         <>
                           <button className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
-                          onClick={handleAccept(job.booking_id)}>
+                          onClick={ () => handleAccept(job.booking_id)}>
                             Accept Job
                           </button>
                           <button
