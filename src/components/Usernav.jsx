@@ -77,7 +77,12 @@ const Usernav = (props) => {
                       navigate("/workerappointments");
                     }
                   } else {
-                    navigate("/profile");
+                    if (user_role ==="app_user"){
+                      navigate("/profile");
+                    }else if (link === "worker"){
+                      navigate("/worker_profile")
+                    }
+
                   }
                 }}
                 className={`cursor-pointer text-[14px] transition-all duration-300 pb-1 ${

@@ -67,14 +67,6 @@ const ServicePage = () => {
     };
 
 
-    useEffect(() => {
-      var output=localStorage.getItem("Searchquery");
-      if(output!=null){
-        setSearchTerm(output);
-        localStorage.removeItem("Searchquery");
-      }    
-      
-    }, [])
     
 
     // Debounce: Wait 300ms after user stops typing to fetch
@@ -91,6 +83,17 @@ const ServicePage = () => {
     minRating,
     currentPage,
   ]);
+
+
+  useEffect(() => {
+      var output=localStorage.getItem("Searchquery");
+      if(output!=null){
+        setSearchTerm(output);
+        localStorage.removeItem("Searchquery");
+      }    
+      
+    }, [])
+    
 
   // --- 3. SORT LOGIC ---
   // The backend gives us exactly the 18 items we need, so we just sort them locally
