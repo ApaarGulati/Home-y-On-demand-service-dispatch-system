@@ -34,14 +34,14 @@ const Home = () => {
 
 
     const showAlert = (string) => {
-        setDialog({
+        setdialog({
             isOpen: true,
             message: string
         });
     };
 
     const closeDialog = () => {
-        setDialog({ ...dialog, isOpen: false });
+        setdialog({ ...dialog, isOpen: false });
     };
 
     // --- 1. INITIAL LOAD ---

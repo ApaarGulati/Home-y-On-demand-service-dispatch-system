@@ -31,14 +31,14 @@ const Checkout = () => {
   const [dialog, setdialog] = useState({ isOpen: false, message: "" });
 
   const showAlert = (string) => {
-    setDialog({
+    setdialog({
       isOpen: true,
       message: string
     });
   };
 
   const closeDialog = () => {
-    setDialog({ ...dialog, isOpen: false });
+    setdialog({ ...dialog, isOpen: false });
   };
 
   // Safety check for direct URL access

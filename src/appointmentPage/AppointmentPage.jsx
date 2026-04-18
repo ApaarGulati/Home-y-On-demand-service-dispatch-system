@@ -153,14 +153,14 @@ const AppointmentPage = () => {
   const [dialog, setdialog] = useState({ isOpen: false, message: "" });
 
   const showAlert = (string) => {
-    setDialog({
+    setdialog({
       isOpen: true,
       message: string
     });
   };
 
   const closeDialog = () => {
-    setDialog({ ...dialog, isOpen: false });
+    setdialog({ ...dialog, isOpen: false });
   };
 
   // 3. ADDED REFRESH FUNCTION
