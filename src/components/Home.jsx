@@ -69,7 +69,7 @@ const Home = () => {
 
     return (
         <>
-            <Usernav />
+            <Usernav page="Home" />
             <ScrollFadeIn>
                 <div className=' w-full h-100   flex flex-row flex-wrap justify-center  items-center  gap-4 bg-transparent'>
                     {isUser == true ? <><p className='text-center text-7xl font-extrabold dark:text-white'>Home services at </p> <p className='text-center text-cyan-500 text-6xl font-extrabold'>your doorstep</p></> : <><p className='text-center text-7xl font-extrabold dark:text-white'>Own your craft.</p> <p className='text-center text-cyan-500 text-6xl font-extrabold'>Own your time.</p></>}
