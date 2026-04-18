@@ -193,58 +193,160 @@ def logout_account():
     
     return response, 200
 
+
+
+
 @auth_bp.route('/profile', methods=['GET'])
 @token_required
 @role_required(['app_user'])
 def get_profile(current_user):
-    print(current_user)
     try:
-        
         user_id = current_user.get('user_id')
     
-        # Join Account with AppUser and Wallet using the account_id link
+        # 1. Added AppUser Join
+        # 2. Changed Address to .outerjoin()
         result = db.session.query(
             Account.first_name,
             Account.middle_name,
             Account.last_name,
             Account.email,
             Account.phone,
-        
             Wallet.current_balance,
-
             Address.state,
             Address.street_line_1,
             Address.street_line_2,
             Address.city,
             Address.country,
             Address.postal_code,
-            
-            
-        ).join(Wallet, Account.account_id == Wallet.account_id)\
-         .join(Address, Account.account_id == Address.account_id)\
-         .filter(AppUser.user_id == user_id ).first()
+        ).join(AppUser, Account.account_id == AppUser.account_id)\
+         .join(Wallet, Account.account_id == Wallet.account_id)\
+         .outerjoin(Address, Account.account_id == Address.account_id)\
+         .filter(AppUser.user_id == user_id).first()
          
-
         if not result:
             return jsonify({"status": "error", "message": "User not found"}), 404
 
+        # Safely combine the name so "None" doesn't show up for middle names
+        name_parts = [result.first_name, result.middle_name, result.last_name]
+        full_name = " ".join([part for part in name_parts if part])
+
+        # Safely combine the address ONLY if they actually have one
+        address_string = ""
+        if result.street_line_1: 
+            addr_parts = [
+                result.street_line_1, 
+                result.street_line_2, 
+                result.city, 
+                result.state, 
+                result.postal_code, 
+                result.country
+            ]
+            address_string = ", ".join([str(part) for part in addr_parts if part])
+
         profile_data = {
-            "name": f"{result.first_name} {result.middle_name} {result.last_name}",
+            "name": full_name.strip(),
             "email": result.email,
             "phone": result.phone,
-
-            "address": f"{result.street_line_1} {result.street_line_2} {result.city} {result.state}-{result.postal_code} {result.country}",
-
-            "current_balance": result.current_balance
+            "address": address_string,
+            "current_balance": float(result.current_balance or 0)
         }
 
         return jsonify({"status": "success", "data": profile_data}), 200
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print(f"Profile fetch error: {e}")
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
 
 
 # register, Booking,  cancelling,  payment,   encash
+@auth_bp.route('/wallet/withdraw-funds', methods=['POST'])
+@token_required
+@role_required(['worker']) # Good practice to secure this!
+def withdraw_funds(current_user):
+    try:
+        # 1. Get the worker_id from the JWT token
+        worker_id = current_user.get('user_id') 
+        
+        # 2. Look up the Worker to find their linked account_id
+        worker = Worker.query.filter_by(worker_id=worker_id).first()
+        if not worker:
+            return jsonify({"status": "error", "message": "Worker profile not found"}), 404
+        
+        # 3. Lock the row and fetch the Wallet using the account_id
+        wallet = Wallet.query.with_for_update().filter_by(account_id=worker.account_id).first()
+
+        if not wallet:
+            return jsonify({"status": "error", "message": "Wallet not found"}), 404
+
+        withdrawn_amount = float(wallet.current_balance)
+
+        # 4. Ensure there is actually money to withdraw
+        if withdrawn_amount <= 0:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": "No funds available to withdraw."}), 400
+        
+
+        # logic for bank me paise dal diye hai but we never had connected any account otherwise that would have been 2 projects in 1
+
+
+        # 5. Empty the wallet
+        wallet.current_balance = 0.0
+        db.session.commit()
+
+        return jsonify({
+            "status": "success", 
+            "message": f"Successfully withdrew your entire balance of ₹{withdrawn_amount} to your bank account.",
+            "new_balance": 0.0
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Withdraw Error: {e}")
+        return jsonify({"status": "error", "message": "Transaction failed"}), 500
+
+
+
+
+@auth_bp.route('/wallet/add-funds', methods=['POST'])
+@token_required
+@role_required(['app_user']) 
+def add_funds(current_user):
+    data = request.get_json()
+    amount = float(data.get('amount', 0))
+
+    if amount <= 0:
+        return jsonify({"status": "error", "message": "Amount must be greater than 0"}), 400
+
+    try:
+        # 1. Get the user_id (AppUser ID) from the JWT token
+        appuser_id = current_user.get('user_id') 
+        
+        # 2. Look up the AppUser to find their linked account_id
+        customer = AppUser.query.filter_by(user_id=appuser_id).first()
+        if not customer:
+            return jsonify({"status": "error", "message": "Customer profile not found"}), 404
+        
+        # 3. Lock and fetch the Wallet using the account_id
+        wallet = Wallet.query.with_for_update().filter_by(account_id=customer.account_id).first()
+
+        if not wallet:
+            return jsonify({"status": "error", "message": "Wallet not found"}), 404
+
+        # 4. Add the funds
+        wallet.current_balance = float(wallet.current_balance) + amount
+        db.session.commit()
+
+        return jsonify({
+            "status": "success", 
+            "message": f"Successfully added ₹{amount} to your wallet.",
+            "new_balance": float(wallet.current_balance)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Add Funds Error: {e}")
+        return jsonify({"status": "error", "message": "Transaction failed"}), 500
+
 
 @auth_bp.route('/workerprofile', methods=['GET'])
 @token_required
