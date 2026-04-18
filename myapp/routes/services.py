@@ -168,3 +168,123 @@ def get_worker_reviews(current_user):
     except Exception as e:
         print(f"Error fetching reviews: {e}")
         return jsonify({"status": "error", "message": "Failed to load reviews"}), 500
+    
+
+
+@services_bp.route('/my-services', methods=['GET'])
+@token_required
+@role_required(['worker'])
+def get_my_services(current_user):
+    try:
+        # Get worker_id from the JWT token
+        worker_id = current_user.get('user_id')
+        
+        # Join Service table with WorkerService to get the full service details
+        services = db.session.query(
+            Service.service_id,
+            Service.service_name,
+
+            WorkerService.base_price,
+            WorkerService.price_type
+        ).join(WorkerService, Service.service_id == WorkerService.service_id)\
+         .filter(WorkerService.worker_id == worker_id).all()
+
+        # Format the data for the frontend
+        service_list = []
+        for s in services:
+            service_list.append({
+                "service_id": s.service_id,
+                "name": s.service_name,
+                "price": float(s.base_price),
+                "type": s.price_type
+            })
+
+        return jsonify({"status": "success", "data": service_list}), 200
+
+    except Exception as e:
+        print(f"Error fetching worker services: {e}")
+        return jsonify({"status": "error", "message": "Failed to load services"}), 500
+    
+
+
+@services_bp.route('/get-all-services-list', methods=['GET'])
+def get_all_services_list():
+    print("l")
+    try:
+        # Fetch all services from the database
+        all_services = Service.query.all()
+
+        # Format the list for the frontend
+        services_data = [
+            {
+                "service_id": s.service_id,
+                "service_name": s.service_name
+            } for s in all_services
+        ]
+
+        return jsonify({
+            "status": "success",
+            "data": services_data
+        }), 200
+
+    except Exception as e:
+        print(f"Error fetching full service list: {e}")
+        return jsonify({
+            "status": "error", 
+            "message": "Could not retrieve service list"
+        }), 500
+    
+
+
+
+# --- ADD A SINGLE SERVICE ---
+@services_bp.route('/add-service', methods=['POST'])
+@token_required
+@role_required(['worker'])
+def add_service(current_user):
+    data = request.get_json()
+    service_id = data.get('service_id')
+    base_price = data.get('base_price', 0.0)
+    service_type = data.get('service_type', 'fixed')
+    if not service_id or not base_price or not service_type:
+        return jsonify({"status": "error", "message": "Missing argument id/baseprice/servicetype"}), 404
+        
+    
+    try:
+        worker_id = current_user.get('user_id')
+        
+        new_link = WorkerService(
+            worker_id=worker_id,
+            service_id=service_id,
+            base_price=float(base_price), 
+            price_type=service_type
+        )
+        db.session.add(new_link)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Skill added!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+
+# --- REMOVE A SINGLE SERVICE ---
+@services_bp.route('/remove-service', methods=['DELETE'])
+@token_required
+@role_required(['worker'])
+def remove_service(current_user):
+    data = request.get_json()
+    service_id = data.get('service_id')
+
+    try:
+        worker_id = current_user.get('user_id')
+        WorkerService.query.filter_by(worker_id=worker_id, service_id=service_id).delete()
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Skill removed!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+

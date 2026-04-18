@@ -466,3 +466,4 @@ def update_address(current_user):
         db.session.rollback()
         print(f"Address Update Error: {e}")
         return jsonify({"status": "error", "message": "Failed to save address"}), 500
+    
