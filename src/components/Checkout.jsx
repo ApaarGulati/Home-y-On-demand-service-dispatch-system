@@ -85,7 +85,7 @@ const Checkout = () => {
       const data = await response.json();
 
       if (response.ok && data.status === "success") {
-        navigate("/orderconfirmed");
+        navigate("/home");
       } else {
         // This catches 401 Unauthorized or 403 Forbidden (Role Issues)
         alert(data.message || `Error ${response.status}: Booking failed.`);
