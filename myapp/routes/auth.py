@@ -406,3 +406,63 @@ def get_worker_profile(current_user):
     except Exception as e:
         print(f"Error fetching profile: {e}")
         return jsonify({"status": "error", "message": "Internal server error"}), 500
+    
+
+
+@auth_bp.route('/update-address', methods=['POST'])
+@token_required
+@role_required(['app_user'])
+def update_address(current_user):
+    data = request.get_json()
+    
+    # 1. Validate required fields
+    required_fields = ['address_type', 'street_line_1', 'city', 'state', 'postal_code', 'country']
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({"status": "error", "message": f"Field '{field}' is required"}), 400
+    if data.get('address_type') not in ['home', 'work', 'billing', 'shipping']:
+         return jsonify({"status": "error", "message": f"Invalid address type"}), 400
+
+    try:
+        # 2. Get the account_id via the app_user link
+        user_id = current_user.get('user_id')
+        app_user = AppUser.query.filter_by(user_id=user_id).first()
+        
+        if not app_user:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+        
+        account_id = app_user.account_id
+
+        # 3. Check if an address already exists for this account
+        address = Address.query.filter_by(account_id=account_id).first()
+
+        if address:
+            # UPDATE existing address
+            address.address_type = data.get('address_type')
+            address.street_line_1 = data.get('street_line_1')
+            address.street_line_2 = data.get('street_line_2')
+            address.city = data.get('city')
+            address.state = data.get('state')
+            address.postal_code = data.get('postal_code')
+            address.country = data.get('country')
+        else:
+            # INSERT new address
+            new_address = Address(
+                account_id=account_id,
+                address_type=data.get('address_type', 'Home'),
+                street_line_1=data.get('street_line_1'),
+                street_line_2=data.get('street_line_2'),
+                city=data.get('city'),
+                state=data.get('state'),
+                postal_code=data.get('postal_code'),
+                country=data.get('country')
+            )
+            db.session.add(new_address)
+
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Address updated successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Address Update Error: {e}")
+        return jsonify({"status": "error", "message": "Failed to save address"}), 500

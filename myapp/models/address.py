@@ -3,7 +3,7 @@ from myapp.extensions import db
 class Address(db.Model):
     __tablename__ = 'address'
 
-    address_id = db.Column(db.String(20), primary_key=True)
+    address_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     account_id = db.Column(db.String(20), db.ForeignKey('account.account_id', ondelete='CASCADE'), nullable=False)
     address_type = db.Column(db.String(20), nullable=False)
     
