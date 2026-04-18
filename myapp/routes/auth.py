@@ -173,7 +173,7 @@ def login_account():
 
 @auth_bp.route('/logout', methods=['POST'])
 @token_required
-def logout_account(current_user):
+def logout_account():
     # 1. Create a successful JSON response
     response = make_response(jsonify({
         "status": "success",
@@ -194,6 +194,7 @@ def logout_account(current_user):
 @auth_bp.route('/profile', methods=['GET'])
 @token_required
 def get_profile(current_user):
+    print(current_user)
     try:
         
         user_id = current_user.get('user_id')
