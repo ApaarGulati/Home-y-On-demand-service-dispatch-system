@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 export const AnimatedInput = ({ 
   placeholders = ["Search...", "Find products...", "Get help..."], 
   type = "text", 
-  className = "", 
+  className = "",onChange, 
   ...passedProps 
 }) => {
   const [currentText, setCurrentText] = useState("");
@@ -43,6 +43,7 @@ export const AnimatedInput = ({
   return (
     <input
       type={type}
+      onChange={onChange}
       placeholder={currentText}
       className={`p-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 transition-all ${className}`}
       {...passedProps}

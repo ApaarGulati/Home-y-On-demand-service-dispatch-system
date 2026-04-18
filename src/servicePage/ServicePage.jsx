@@ -5,6 +5,9 @@ import { categories } from "./data";
 const ServicePage = () => {
   const navigate = useNavigate();
 
+
+
+
   // --- BACKEND DATA STATE ---
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +66,17 @@ const ServicePage = () => {
         setLoading(false);
       }
     };
+
+
+    useEffect(() => {
+      var output=localStorage.getItem("Searchquery");
+      if(output!=null){
+        setSearchTerm(output);
+        localStorage.removeItem("Searchquery");
+      }    
+      
+    }, [])
+    
 
     // Debounce: Wait 300ms after user stops typing to fetch
     const delayDebounceFn = setTimeout(() => {
