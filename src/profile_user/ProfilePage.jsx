@@ -197,7 +197,7 @@ const ProfilePage = () => {
 
         {/* --- WALLET SECTION --- */}
         <ScrollFadeIn>
-          <div className="mb-8 bg-linear-to-br from-cyan-600 to-blue-700 rounded-3xl p-6 text-white shadow-xl flex flex-wrap items-center justify-between gap-6">
+          <div className="mb-8 bg-linear-to-br from-cyan-500 to-cyan-500 rounded-3xl p-6 text-white shadow-xl flex flex-wrap items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-md">
                 <WalletIcon size={32} />
