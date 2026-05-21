@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+
+
+.firstdiv{
+  background-color: red;
+  color: aqua;
+  width: 50px;
+  height: 50px;
+}
+
+/* <div class="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */
+@layer utilities {
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      .no-scrollbar::-webkit-scrollbar {
+          display: none;
+      }
+     /* Hide scrollbar for IE, Edge and Firefox */
+      .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+    }
+  }
+
+
+  @theme{
+    --animate-fadein:fadein 1.5s ease-out forwards;
+
+    @keyframes fadein{
+      0%{
+        opacity: 0%;
+      }
+
+      100%{
+        opacity: 100%;
+      }
+    }
+  }

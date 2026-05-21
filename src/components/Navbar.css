@@ -1,0 +1,17 @@
+.comp{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 40px;
+    align-items:end;
+    justify-content: end;    
+}
+
+.container{
+    background-color: aqua;
+    width: 100vw;
+}
+
+li{
+    list-style: none;
+}

@@ -167,6 +167,7 @@ def get_worker_reviews(current_user):
 
     except Exception as e:
         print(f"Error fetching reviews: {e}")
+<<<<<<< HEAD
         return jsonify({"status": "error", "message": "Failed to load reviews"}), 500
     
 
@@ -288,3 +289,6 @@ def remove_service(current_user):
     
 
 
+=======
+        return jsonify({"status": "error", "message": "Failed to load reviews"}), 500
+>>>>>>> 1a22386c23025780c9df71226aa05ba4cbead858

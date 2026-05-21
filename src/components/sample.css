@@ -1,0 +1,15 @@
+/* Define the animation */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Create a custom utility class */
+.animate-marquee-infinite {
+  
+  animation: marquee 10s linear infinite;
+}
+
+.animate-marquee-infinite:hover {
+  animation-play-state: paused;
+}
